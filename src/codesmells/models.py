@@ -44,3 +44,9 @@ class Rule:
     safe_patterns: List[str] = field(default_factory=list)
     refactor_template: Optional[str] = None
     refactor_explanation: str = ""
+
+@dataclass
+class RuleTest:
+    rule_id: str
+    anti_patterns: List[str] = field(default_factory=list)
+    safe_patterns: List[str] = field(default_factory=list)
