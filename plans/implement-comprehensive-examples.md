@@ -23,11 +23,11 @@ Expand the `examples/` knowledge base to provide a "batteries-included" experien
 - **Target Smells (HTML/CSS):** Div Soup, !important Overuse, Magic Numbers, XSS in HTML (Security), Open/Closed violation in CSS (SOLID).
 
 ## 3. Implementation Checklist per Smell
-For each smell `examples/<lang>/<category>/<smell_id>/`:
-- [ ] Create `bad.<ext>` (Demonstration of the smell).
-- [ ] Create `good.<ext>` (Refactored/Safe version).
-- [ ] Author `rule.md` (CodeSmells rule template with front-matter).
-- [ ] Author `test.md` (.smell.test.md validation suite).
+For each smell `examples/<lang>/<smell-name>/`:
+- [ ] Create `<smell-name>.bad.<ext>` (Demonstration of the smell).
+- [ ] Create `<smell-name>.good.<ext>` (Refactored/Safe version).
+- [ ] Author `<smell-name>.smell.md` (CodeSmells rule template with front-matter).
+- [ ] Author `<smell-name>.smell.test.md` (.smell.test.md validation suite).
 - [ ] Run `codesmells validate` and ensure it passes.
 
 ## 4. Standard Library Strategy
