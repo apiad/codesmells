@@ -43,6 +43,7 @@ def main(ctx: typer.Context):
         console.print("  8. [bold cyan]accept <id>[/]   Mark a candidate as addressed.")
         console.print("  9. [bold cyan]ignore <id>[/]   Mark a candidate as safe (adds to Safe patterns).")
         console.print("  10. [bold cyan]finish[/]       Complete the session and clear state.")
+        console.print("  11. [bold cyan]install-skill[/] Install SKILL.md for AI agents.")
 
         console.print("\n[bold yellow]NEXT STEPS[/]")
         codesmells_dir = Path(".codesmells")
@@ -204,6 +205,45 @@ pre_filters:
     console.print("  3. [magenta]Refactoring:[/] Add a Python code block of the ideal code.")
     console.print("  4. [magenta]Tests:[/] Add examples to the .test.md file and run [bold green]codesmells validate[/].")
     console.print("\n[dim]Then run [bold]codesmells scan[/] to see your rule in action![/dim]")
+
+@app.command()
+def install_skill(
+    path: Optional[str] = typer.Argument(None, help="Path to install the SKILL.md file (e.g. .gemini/skills)"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing SKILL.md file")
+):
+    """Install the CodeSmells SKILL.md for AI agents."""
+    template_path = Path(__file__).parent / "templates" / "SKILL.md"
+    if not template_path.exists():
+        console.print("[bold red]Error:[/] SKILL.md template not found.")
+        raise typer.Exit(code=1)
+
+    if not path:
+        console.print("[bold cyan]CodeSmells AI Agent Skill[/]")
+        console.print("This command installs a [bold]SKILL.md[/] file that provides instructions")
+        console.print("to AI agents (Gemini, Claude, etc.) on how to use CodeSmells effectively.")
+        
+        console.print("\n[bold]Suggested Installation Paths:[/]")
+        console.print("  - [bold yellow]Gemini CLI:[/]  .gemini/skills/codesmells/")
+        console.print("  - [bold yellow]Claude Code:[/] .claude/skills/codesmells/")
+        
+        console.print("\n[bold]Example Usage:[/]")
+        console.print("  [green]codesmells install-skill .gemini/skills/[/]")
+        return
+
+    dest_dir = Path(path) / "codesmells"
+    dest_file = dest_dir / "SKILL.md"
+
+    if dest_file.exists() and not force:
+        console.print(f"[bold red]Error:[/] Skill already exists at [bold cyan]{dest_file}[/]. Use [bold]--force[/] to overwrite.")
+        raise typer.Exit(code=1)
+
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file.write_text(template_path.read_text())
+        console.print(f"[bold green]Success:[/] Installed CodeSmells skill to [bold cyan]{dest_file}[/].")
+    except Exception as e:
+        console.print(f"[bold red]Error:[/] Failed to install skill: {e}")
+        raise typer.Exit(code=1)
 
 @app.command()
 def validate(rule_id: Optional[str] = typer.Argument(None, help="Specific rule ID to validate")):
