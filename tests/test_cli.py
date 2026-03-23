@@ -143,3 +143,21 @@ def bad_func():
         suggest_no_template = runner.invoke(app, ["suggest", c_id])
         assert suggest_no_template.exit_code != 0 or "no refactoring template" in suggest_no_template.stdout.lower()
         assert "no refactoring template" in suggest_no_template.stdout.lower()
+
+def test_init_basic():
+    with runner.isolated_filesystem():
+        result = runner.invoke(app, ["init"])
+        assert result.exit_code == 0
+        assert "Initialized CodeSmells" in result.stdout
+        
+        codesmells_dir = Path(".codesmells")
+        assert codesmells_dir.is_dir()
+        
+        gitignore_file = codesmells_dir / ".gitignore"
+        assert gitignore_file.exists()
+        assert "session.json" in gitignore_file.read_text()
+        
+        # Test repeat init fails
+        result_repeat = runner.invoke(app, ["init"])
+        assert result_repeat.exit_code != 0
+        assert "already exists" in result_repeat.stdout

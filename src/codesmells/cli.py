@@ -40,6 +40,21 @@ def _print_status_table(candidates: List[Candidate]):
     console.print(table)
 
 @app.command()
+def init():
+    """Initialize CodeSmells in the current directory."""
+    codesmells_dir = Path(".codesmells")
+    if codesmells_dir.exists():
+        console.print("[bold red]Error:[/] .codesmells directory already exists.")
+        raise typer.Exit(code=1)
+
+    codesmells_dir.mkdir()
+    gitignore_file = codesmells_dir / ".gitignore"
+    gitignore_file.write_text("session.json\n")
+    
+    console.print(f"[bold green]Success:[/] Initialized CodeSmells in {codesmells_dir}/.")
+    console.print("[bold yellow]Next Step:[/] Use 'add <name> <description>' to create your first rule.")
+
+@app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     """Scan directory for anti-patterns."""
     storage = StorageManager()
