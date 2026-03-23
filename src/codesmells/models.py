@@ -19,6 +19,12 @@ class Token:
     col_num: int = 0
 
 @dataclass
+class Binding:
+    candidate_id: str
+    sigil: str
+    bound_value: str
+
+@dataclass
 class Candidate:
     id: str
     rule_id: str
@@ -26,12 +32,7 @@ class Candidate:
     line_num: int
     raw_snippet: str
     status: str = "PENDING" # PENDING, ACCEPTED, IGNORED
-
-@dataclass
-class Binding:
-    candidate_id: str
-    sigil: str
-    bound_value: str
+    bindings: List[Binding] = field(default_factory=list)
 
 @dataclass
 class Rule:

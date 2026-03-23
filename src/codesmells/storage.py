@@ -18,8 +18,71 @@ class StorageManager:
                 json.dump({"candidates": []}, f)
 
     def save_candidates(self, candidates: List[Candidate]):
-        # TODO: Implement JSON storage
-        pass
+        """
+        Saves a list of candidates to the session.json file.
+        """
+        data = {"candidates": [self._candidate_to_dict(c) for c in candidates]}
+        with open(self.session_file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def load_candidates(self) -> List[Candidate]:
+        """
+        Loads all candidates from the session.json file.
+        """
+        if not self.session_file.exists():
+            return []
+        
+        with open(self.session_file, 'r') as f:
+            data = json.load(f)
+        
+        return [self._dict_to_candidate(c) for c in data.get("candidates", [])]
+
+    def update_candidate_status(self, candidate_id: str, status: str):
+        """
+        Updates the status of a specific candidate in the session.json file.
+        """
+        candidates = self.load_candidates()
+        for c in candidates:
+            if c.id == candidate_id:
+                c.status = status
+                break
+        self.save_candidates(candidates)
+
+    def _candidate_to_dict(self, c: Candidate) -> dict:
+        return {
+            "id": c.id,
+            "rule_id": c.rule_id,
+            "file_path": c.file_path,
+            "line_num": c.line_num,
+            "raw_snippet": c.raw_snippet,
+            "status": c.status,
+            "bindings": [
+                {
+                    "candidate_id": b.candidate_id,
+                    "sigil": b.sigil,
+                    "bound_value": b.bound_value
+                } for b in c.bindings
+            ]
+        }
+
+    def _dict_to_candidate(self, d: dict) -> Candidate:
+        from codesmells.models import Binding
+        bindings = [
+            Binding(
+                candidate_id=b["candidate_id"],
+                sigil=b["sigil"],
+                bound_value=b["bound_value"]
+            ) for b in d.get("bindings", [])
+        ]
+        return Candidate(
+            id=d["id"],
+            rule_id=d["rule_id"],
+            file_path=d["file_path"],
+            line_num=d["line_num"],
+            raw_snippet=d["raw_snippet"],
+            status=d["status"],
+            bindings=bindings
+        )
 
     def load_rules(self, path: str) -> List[Rule]:
         """

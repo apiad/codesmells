@@ -1,8 +1,9 @@
 import os
 import tempfile
+import json
 from pathlib import Path
 from codesmells.storage import StorageManager
-from codesmells.models import Rule
+from codesmells.models import Rule, Candidate
 
 def test_load_rules():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -102,3 +103,59 @@ safe2()
         rule = rules[0]
         assert rule.anti_patterns == ["bad1()", "bad2()"]
         assert rule.safe_patterns == ["safe1()", "safe2()"]
+
+def test_storage_session_init():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        storage = StorageManager(root_dir=tmpdir)
+        session_file = Path(tmpdir) / "session.json"
+        assert session_file.exists()
+        
+        with open(session_file, 'r') as f:
+            data = json.load(f)
+            assert "candidates" in data
+            assert data["candidates"] == []
+
+def test_save_load_candidates():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        storage = StorageManager(root_dir=tmpdir)
+        candidates = [
+            Candidate(
+                id="cand1",
+                rule_id="rule1",
+                file_path="src/main.py",
+                line_num=10,
+                raw_snippet="print('hello')",
+                status="PENDING"
+            )
+        ]
+        storage.save_candidates(candidates)
+        
+        loaded = storage.load_candidates()
+        assert len(loaded) == 1
+        assert loaded[0].id == "cand1"
+        assert loaded[0].rule_id == "rule1"
+        assert loaded[0].file_path == "src/main.py"
+        assert loaded[0].line_num == 10
+        assert loaded[0].raw_snippet == "print('hello')"
+        assert loaded[0].status == "PENDING"
+
+def test_update_candidate_status():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        storage = StorageManager(root_dir=tmpdir)
+        candidates = [
+            Candidate(
+                id="cand1",
+                rule_id="rule1",
+                file_path="src/main.py",
+                line_num=10,
+                raw_snippet="print('hello')",
+                status="PENDING"
+            )
+        ]
+        storage.save_candidates(candidates)
+        
+        storage.update_candidate_status("cand1", "ACCEPTED")
+        
+        loaded = storage.load_candidates()
+        assert len(loaded) == 1
+        assert loaded[0].status == "ACCEPTED"
