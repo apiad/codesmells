@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typer.testing import CliRunner
 from codesmells.cli import app
 
@@ -81,9 +83,6 @@ def bad_func():
         assert result_fail.exit_code != 0
         assert "Safe Pattern #1 failed" in result_fail.stdout
         assert "1 failed" in result_fail.stdout
-
-import json
-from pathlib import Path
 
 def test_scan_functional():
     with runner.isolated_filesystem():

@@ -494,7 +494,8 @@ def inspect(id: str):
     while curr != Path(".") and curr != Path("/"):
         if (curr / ".codesmells").is_dir():
             rules.extend(storage.load_rules(str(curr / ".codesmells")))
-        if curr == curr.parent: break
+        if curr == curr.parent:
+            break
         curr = curr.parent
 
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
@@ -547,7 +548,8 @@ def suggest(id: str):
     while curr != Path(".") and curr != Path("/"):
         if (curr / ".codesmells").is_dir():
             rules.extend(storage.load_rules(str(curr / ".codesmells")))
-        if curr == curr.parent: break
+        if curr == curr.parent:
+            break
         curr = curr.parent
 
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
@@ -601,7 +603,8 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
     while curr != Path(".") and curr != Path("/"):
         if (curr / ".codesmells").is_dir():
             rules.extend(storage.load_rules(str(curr / ".codesmells")))
-        if curr == curr.parent: break
+        if curr == curr.parent:
+            break
         curr = curr.parent
 
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
@@ -624,7 +627,7 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
 
     # Validation Gate 2: Template complexity (must contain $SIGIL or ...)
     if not any(token.value.startswith("$") or token.value == "..." for token in template_tokens):
-        console.print(f"[bold red]Validation Failure (Gate 2):[/] Template must contain at least one [bold yellow]$SIGIL[/] or [bold yellow]...[/]")
+        console.print("[bold red]Validation Failure (Gate 2):[/] Template must contain at least one [bold yellow]$SIGIL[/] or [bold yellow]...[/]")
         raise typer.Exit(code=1)
 
     # Validation Gate 3: S(template, anti_pattern) < 0.9

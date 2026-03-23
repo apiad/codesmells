@@ -1,9 +1,8 @@
-import os
 import tempfile
 import json
 from pathlib import Path
 from codesmells.storage import StorageManager
-from codesmells.models import Rule, Candidate
+from codesmells.models import Candidate
 
 def test_load_rules():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -107,7 +106,7 @@ safe2()
 
 def test_storage_session_init():
     with tempfile.TemporaryDirectory() as tmpdir:
-        storage = StorageManager(root_dir=tmpdir)
+        StorageManager(root_dir=tmpdir)
         session_file = Path(tmpdir) / "session.json"
         assert session_file.exists()
         
