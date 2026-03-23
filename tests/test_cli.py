@@ -62,10 +62,9 @@ def good_func():
         result = runner.invoke(app, ["validate"])
         assert result.exit_code == 0
         assert "Validating test-smell" in result.stdout
-        assert "Anti-Pattern #1 matched" in result.stdout
-        assert "Safe Pattern #1 correctly ignored" in result.stdout
+        assert "Auto-tuned tau" in result.stdout
+        assert "Safe Pattern #1" in result.stdout
         assert "1 passed" in result.stdout
-        
         # Test validation failure (lowering tau or changing test to something that matches)
         test_path.write_text("""### Anti-Pattern
 ```python
@@ -81,7 +80,9 @@ def bad_func():
 """)
         result_fail = runner.invoke(app, ["validate"])
         assert result_fail.exit_code != 0
-        assert "Safe Pattern #1 failed" in result_fail.stdout
+        assert "Failure: Overlapping scores" in result_fail.stdout
+        assert "0 passed, 1 failed" in result_fail.stdout
+
         assert "1 failed" in result_fail.stdout
 
 def test_scan_functional():

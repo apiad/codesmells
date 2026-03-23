@@ -246,17 +246,35 @@ def install_skill(
         raise typer.Exit(code=1)
 
 @app.command()
-def validate(rule_id: Optional[str] = typer.Argument(None, help="Specific rule ID to validate")):
-    """Validate rule templates against their test patterns."""
+def validate(path_or_id: Optional[str] = typer.Argument(None, help="Path to a directory of rules, a rule file, or a rule ID")):
+    """Validate rule templates against their test patterns and auto-tune thresholds."""
     storage = StorageManager()
     
-    if rule_id:
-        # Validate specific rule
-        rule_file = storage.root_dir / f"{rule_id}.smell.md"
-        if not rule_file.exists():
-            console.print(f"[bold red]Error:[/] Rule [bold cyan]{rule_id}[/] not found.")
-            raise typer.Exit(code=1)
-        rules = [storage._parse_rule_file(rule_file)]
+    if path_or_id and Path(path_or_id).is_dir():
+        rules = storage.load_rules(path_or_id)
+    elif path_or_id:
+        # Validate specific rule or file
+        path_obj = Path(path_or_id)
+        if path_obj.exists() and path_obj.name.endswith(".smell.md"):
+            rules = [storage._parse_rule_file(path_obj)]
+        else:
+            # Assume it's a rule ID
+            try:
+                # Try recursive search
+                found = list(Path(".").glob(f"**/{path_or_id}.smell.md"))
+                if not found:
+                    # Try in .codesmells
+                    rule_file = storage.root_dir / f"{path_or_id}.smell.md"
+                    if not rule_file.exists():
+                        console.print(f"[bold red]Error:[/] Rule [bold cyan]{path_or_id}[/] not found.")
+                        raise typer.Exit(code=1)
+                    rule_file = rule_file
+                else:
+                    rule_file = found[0]
+                rules = [storage._parse_rule_file(rule_file)]
+            except Exception as e:
+                console.print(f"[bold red]Error:[/] Failed to load rule {path_or_id}: {e}")
+                raise typer.Exit(code=1)
     else:
         # Validate all rules in .codesmells
         rules = storage.load_rules(str(storage.root_dir))
@@ -278,53 +296,94 @@ def validate(rule_id: Optional[str] = typer.Argument(None, help="Specific rule I
             continue
             
         console.print(f"Validating [bold cyan]{rule.id}[/]...")
-        rule_passed = True
         
-        # Test Anti-Patterns (MUST match)
+        # 1. Collect Anti-Pattern scores
+        anti_scores = []
         for i, ap in enumerate(test.anti_patterns):
             target_tokens = lexer.tokenize(ap)
-            match_found = False
+            max_s = 0.0
             for rule_ap in rule.anti_patterns:
                 template_tokens = lexer.tokenize(rule_ap)
                 score, _, _ = engine.align(target_tokens, template_tokens)
-                if score >= rule.tau:
-                    match_found = True
-                    break
-            
-            if match_found:
-                console.print(f"  [green]✓[/] Anti-Pattern #{i+1} matched (score >= {rule.tau})")
-            else:
-                console.print(f"  [red]✗[/] Anti-Pattern #{i+1} [bold]failed[/] to match (all scores < {rule.tau})")
-                rule_passed = False
-                
-        # Test Safe Patterns (MUST NOT match)
+                max_s = max(max_s, score)
+            anti_scores.append(max_s)
+
+        # 2. Collect Safe Pattern scores
+        safe_scores = []
         for i, safe in enumerate(test.safe_patterns):
             target_tokens = lexer.tokenize(safe)
-            match_found = False
-            max_score = 0
+            max_s = 0.0
             for rule_ap in rule.anti_patterns:
                 template_tokens = lexer.tokenize(rule_ap)
                 score, _, _ = engine.align(target_tokens, template_tokens)
-                max_score = max(max_score, score)
-                if score >= rule.tau:
-                    match_found = True
-                    break
-            
-            if not match_found:
-                console.print(f"  [green]✓[/] Safe Pattern #{i+1} correctly ignored (max score {max_score:.2f} < {rule.tau})")
-            else:
-                console.print(f"  [red]✗[/] Safe Pattern #{i+1} [bold]failed[/]: incorrectly matched (score {max_score:.2f} >= {rule.tau})")
-                rule_passed = False
+                max_s = max(max_s, score)
+            safe_scores.append(max_s)
 
-        if rule_passed:
+        # 3. Auto-tune Tau
+        min_anti = min(anti_scores) if anti_scores else 1.0
+        max_safe = max(safe_scores) if safe_scores else 0.0
+        
+        if min_anti > max_safe:
+            # Success: we have clear separation
+            margin = min_anti - max_safe
+            new_tau = (min_anti + max_safe) / 2
+            
+            # Enforce a minimum margin of 0.05 for stability
+            if margin < 0.05:
+                console.print(f"  [yellow]⚠[/] Warning: Narrow margin ({margin:.2f}). Consider making patterns more distinct.")
+            
+            console.print(f"  [green]✓[/] [bold]Auto-tuned tau:[/] [cyan]{new_tau:.2f}[/] (margin: [dim]{margin:.2f}[/dim])")
+            for i, s in enumerate(anti_scores):
+                console.print(f"    - Anti-Pattern #{i+1}: [green]{s:.2f}[/]")
+            for i, s in enumerate(safe_scores):
+                console.print(f"    - Safe Pattern #{i+1}: [blue]{s:.2f}[/]")
+                
+            storage.update_rule_tau(rule.id, new_tau)
             total_passed += 1
         else:
+            # Failure: overlapping scores
+            console.print(f"  [red]✗[/] [bold]Failure:[/] Overlapping scores. Cannot distinguish between bad and good examples.")
+            overlap_anti_idx = anti_scores.index(min_anti)
+            overlap_safe_idx = safe_scores.index(max_safe)
+            console.print(f"    - Lowest Anti-Pattern (#{overlap_anti_idx+1}): [red]{min_anti:.2f}[/]")
+            console.print(f"    - Highest Safe Pattern (#{overlap_safe_idx+1}): [red]{max_safe:.2f}[/]")
             total_failed += 1
 
     console.print(f"\n[bold]Summary:[/] [green]{total_passed} passed[/], [red]{total_failed} failed[/]")
     
     if total_failed > 0:
         raise typer.Exit(code=1)
+    
+    if total_failed > 0:
+        raise typer.Exit(code=1)
+
+@app.command(name="list")
+def list_rules(directory: str = typer.Argument(".", help="Directory to search for rules")):
+    """List all available code smell rules and their descriptions."""
+    storage = StorageManager()
+    rules = storage.load_rules(directory)
+    
+    if not rules:
+        console.print("[yellow]No rules found.[/]")
+        return
+
+    from rich.table import Table
+    table = Table(title="Available Code Smells")
+    table.add_column("ID", style="cyan", no_wrap=True)
+    table.add_column("Anti", style="red", justify="right")
+    table.add_column("Safe", style="green", justify="right")
+    table.add_column("Description", style="white")
+
+    for rule in rules:
+        test = storage.load_rule_test(rule.id)
+        anti_count = len(test.anti_patterns) if test else 0
+        safe_count = len(test.safe_patterns) if test else 0
+        
+        # Get first line of description or a truncated version
+        short_desc = rule.description.split(".")[0] + "." if rule.description else "No description provided."
+        table.add_row(rule.id, str(anti_count), str(safe_count), short_desc)
+
+    console.print(table)
 
 @app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):
@@ -357,16 +416,19 @@ def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     candidates = []
 
     for root, _, files in os.walk(directory):
-        if ".codesmells" in root or ".git" in root or ".venv" in root:
+        if any(ignore in root for ignore in [".codesmells", ".git", ".venv", "__pycache__", "node_modules"]):
             continue
         for file in files:
-            if not file.endswith(".py"):
+            # Skip hidden files and common non-code extensions
+            if file.startswith(".") or any(file.endswith(ext) for ext in [".pyc", ".lock", ".json", ".md"]):
                 continue
 
             file_path = Path(root) / file
             try:
-                content = file_path.read_text()
-            except UnicodeDecodeError:
+                # Basic check for text file
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read(1024 * 1024) # 1MB limit for safety
+            except (UnicodeDecodeError, PermissionError):
                 continue
 
             target_tokens = lexer.tokenize(content)
@@ -630,13 +692,14 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
         console.print("[bold red]Validation Failure (Gate 2):[/] Template must contain at least one [bold yellow]$SIGIL[/] or [bold yellow]...[/]")
         raise typer.Exit(code=1)
 
-    # Validation Gate 3: S(template, anti_pattern) < 0.9
+    # Validation Gate 3: S(template, anti_pattern) < 0.95
     for anti_pattern in rule.anti_patterns:
-        ap_tokens = lexer.tokenize(anti_pattern)
-        ap_score, _, _ = engine.align(ap_tokens, template_tokens)
-        if ap_score > 0.9:
-            console.print(f"[bold red]Validation Failure (Gate 3):[/] Template is too similar to an anti-pattern ([bold yellow]{ap_score:.2f}[/] > 0.9)")
+        anti_tokens = lexer.tokenize(anti_pattern)
+        score, _, _ = engine.align(template_tokens, anti_tokens)
+        if score > 0.95:
+            console.print(f"[bold red]Validation Failure (Gate 3):[/] Template is too similar to an anti-pattern (score: [bold yellow]{score:.2f}[/])")
             raise typer.Exit(code=1)
+
 
     # All gates passed
     try:

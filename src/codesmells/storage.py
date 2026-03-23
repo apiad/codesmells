@@ -94,6 +94,45 @@ class StorageManager:
         
         file_path.write_text(new_content)
 
+    def update_rule_tau(self, rule_id: str, tau: float):
+        """
+        Updates the tau value in the rule's frontmatter.
+        Searches recursively within .codesmells directories.
+        """
+        # 1. Try direct path in root_dir
+        file_path = self.root_dir / f"{rule_id}.smell.md"
+        
+        # 2. Search recursively in root_dir
+        if not file_path.exists():
+            found = list(self.root_dir.glob(f"**/{rule_id}.smell.md"))
+            if found:
+                file_path = found[0]
+                
+        # 3. Fallback to local .codesmells recursively
+        if not file_path.exists():
+            local_dir = Path(".codesmells")
+            if local_dir.exists():
+                found = list(local_dir.glob(f"**/{rule_id}.smell.md"))
+                if found:
+                    file_path = found[0]
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"Rule file for {rule_id} not found in .codesmells hierarchy.")
+
+        content = file_path.read_text()
+        if not content.startswith("---"):
+             content = f"---\ntau: {tau:.2f}\n---\n\n" + content
+        else:
+            parts = content.split("---", 2)
+            frontmatter_raw = parts[1]
+            if "tau:" in frontmatter_raw:
+                frontmatter_raw = re.sub(r"tau:.*", f"tau: {tau:.2f}", frontmatter_raw)
+            else:
+                frontmatter_raw = frontmatter_raw.rstrip() + f"\ntau: {tau:.2f}\n"
+            content = "---" + frontmatter_raw + "---" + parts[2]
+        
+        file_path.write_text(content)
+
     def _candidate_to_dict(self, c: Candidate) -> dict:
         return {
             "id": c.id,
@@ -132,12 +171,12 @@ class StorageManager:
 
     def load_rules(self, path: str) -> List[Rule]:
         """
-        Loads all .smell.md rules from a directory or a single file.
+        Loads all .smell.md rules recursively from a directory or a single file.
         """
         rules = []
         path_obj = Path(path)
         if path_obj.is_dir():
-            files = list(path_obj.glob("*.smell.md"))
+            files = list(path_obj.glob("**/*.smell.md"))
         else:
             files = [path_obj] if path_obj.name.endswith(".smell.md") else []
 
@@ -147,14 +186,27 @@ class StorageManager:
 
     def load_rule_test(self, rule_id: str) -> Optional[RuleTest]:
         """
-        Loads a .smell.test.md file for a specific rule.
+        Loads a .smell.test.md file for a specific rule, searching recursively within .codesmells.
         """
+        # 1. Try direct path in root_dir
         file_path = self.root_dir / f"{rule_id}.smell.test.md"
+        
+        # 2. Search recursively in root_dir
         if not file_path.exists():
-            # Try to find it in the current directory's .codesmells
-            file_path = Path(".codesmells") / f"{rule_id}.smell.test.md"
-            if not file_path.exists():
-                return None
+            found = list(self.root_dir.glob(f"**/{rule_id}.smell.test.md"))
+            if found:
+                file_path = found[0]
+                
+        # 3. Fallback to local .codesmells recursively
+        if not file_path.exists():
+            local_dir = Path(".codesmells")
+            if local_dir.exists():
+                found = list(local_dir.glob(f"**/{rule_id}.smell.test.md"))
+                if found:
+                    file_path = found[0]
+
+        if not file_path.exists():
+            return None
 
         return self._parse_rule_test_file(file_path, rule_id)
 
@@ -191,10 +243,12 @@ class StorageManager:
                     frontmatter = {}
                 markdown_content = parts[2]
         
-        # ID is the filename without .smell.md
-        rule_id = file_path.name
-        if rule_id.endswith(".smell.md"):
-            rule_id = rule_id[:-9]
+        # ID is prioritized from frontmatter, fallback to filename
+        rule_id = frontmatter.get("id")
+        if not rule_id:
+            rule_id = file_path.name
+            if rule_id.endswith(".smell.md"):
+                rule_id = rule_id[:-9]
             
         pre_filters = frontmatter.get("pre_filters", [])
         tau = frontmatter.get("tau", 0.4)
@@ -203,7 +257,10 @@ class StorageManager:
         safe_patterns = self._extract_code_blocks(markdown_content, "### Safe")
         refactor_templates = self._extract_code_blocks(markdown_content, "### Refactoring")
         
-        description = self._extract_text_before(markdown_content, "### Anti-Pattern")
+        description = frontmatter.get("description")
+        if not description:
+            description = self._extract_text_before(markdown_content, "### Anti-Pattern")
+        
         refactor_explanation = self._extract_text_after(markdown_content, "### Refactoring")
         
         refactor_template = refactor_templates[0] if refactor_templates else None
