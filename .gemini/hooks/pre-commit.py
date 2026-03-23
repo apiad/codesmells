@@ -45,24 +45,24 @@ def main():
 
     # Check journal entry
     if not os.path.exists(journal_path):
-        print(f"Error: Updated journal required. Please read the latest entries in journal/ to understand context,")
-        print(f"then use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
+        print("Error: Updated journal required. Please read the latest entries in journal/ to understand context,")
+        print("then use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
         return 1
 
     with open(journal_path, "r") as f:
-        lines = [l.strip() for l in f.readlines() if l.strip()]
+        lines = [line.strip() for line in f.readlines() if line.strip()]
 
     if not lines:
         print(f"Error: Journal {journal_path} is empty.")
-        print(f"Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
+        print("Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
         return 1
 
     last_line = lines[-1]
     # Expected format: [timestamp ISO] - description
     if not (last_line.startswith("[") and "] - " in last_line):
         print(f"Error: Invalid journal entry format in {journal_path}: '{last_line}'")
-        print(f"Expected format: '[YYYY-MM-DDTHH:MM:SS] - description'")
-        print(f"Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
+        print("Expected format: '[YYYY-MM-DDTHH:MM:SS] - description'")
+        print("Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
         return 1
 
     try:
@@ -70,13 +70,13 @@ def main():
         last_entry_time = datetime.fromisoformat(ts_str).timestamp()
     except (ValueError, IndexError):
         print(f"Error: Could not parse timestamp from journal entry: '{last_line}'")
-        print(f"Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
+        print("Please use: python3 .gemini/scripts/journal.py 'one line summary of changes'")
         return 1
 
     if last_entry_time < max_mtime:
-        print(f"Error: Last journal entry is older than recent changes.")
+        print("Error: Last journal entry is older than recent changes.")
         print(f"Please read {journal_path} to catch up, then add a summary of your latest work using:")
-        print(f"python3 .gemini/scripts/journal.py 'one line summary of changes'")
+        print("python3 .gemini/scripts/journal.py 'one line summary of changes'")
         return 1
 
     return 0

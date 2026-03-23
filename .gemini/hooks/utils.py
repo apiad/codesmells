@@ -1,7 +1,6 @@
 import json
 import os
 import subprocess
-from datetime import datetime
 
 # Configuration
 LOG_FILE = os.getenv("GEMINI_LOG_FILE", "gemini.log")

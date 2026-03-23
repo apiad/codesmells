@@ -1,6 +1,5 @@
 import subprocess
 import os
-import sys
 from utils import send_hook_decision
 
 def notify_user():

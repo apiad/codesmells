@@ -1,7 +1,6 @@
 import os
 import subprocess
 import re
-import sys
 import glob
 
 # Configuration
@@ -27,8 +26,10 @@ def get_tasks_from_toml(toml_path):
                     k, v = line.split("=", 1)
                     k = k.strip()
                     v = v.strip().strip('"').strip("'")
-                    if v.lower() == "true": v = True
-                    elif v.lower() == "false": v = False
+                    if v.lower() == "true":
+                        v = True
+                    elif v.lower() == "false":
+                        v = False
                     current_task[k] = v
         if current_task:
             tasks.append(current_task)
