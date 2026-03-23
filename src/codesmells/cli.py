@@ -55,6 +55,58 @@ def init():
     console.print("[bold yellow]Next Step:[/] Use 'add <name> <description>' to create your first rule.")
 
 @app.command()
+def add(name: str, description: str):
+    """Add a new rule template."""
+    codesmells_dir = Path(".codesmells")
+    if not codesmells_dir.exists():
+        console.print("[bold red]Error:[/] .codesmells directory not found. Run [bold]init[/] first.")
+        raise typer.Exit(code=1)
+
+    # Convert name to kebab-case
+    import re
+    kebab_name = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    file_path = codesmells_dir / f"{kebab_name}.smell.md"
+
+    if file_path.exists():
+        console.print(f"[bold red]Error:[/] Rule [bold cyan]{kebab_name}[/] already exists.")
+        raise typer.Exit(code=1)
+
+    template = f"""---
+tau: 0.4
+pre_filters:
+  - "relevant_keyword"
+---
+# {name}
+
+{description}
+
+### Anti-Pattern
+<!-- Describe the code pattern to avoid -->
+```python
+# Insert anti-pattern code here
+```
+
+### Refactoring
+<!-- Describe the improved version -->
+```python
+# Insert refactored code here
+```
+
+### Refactor Explanation
+<!-- Why is this better? -->
+
+### Safe
+<!-- Optional: examples that look like the anti-pattern but are safe -->
+```python
+# Insert safe example here
+```
+"""
+    file_path.write_text(template)
+    
+    console.print(f"[bold green]Success:[/] Created rule template at [bold cyan]{file_path}[/].")
+    console.print("[bold yellow]Next Step:[/] Edit the file to define your anti-pattern and refactoring template.")
+
+@app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     """Scan directory for anti-patterns."""
     storage = StorageManager()

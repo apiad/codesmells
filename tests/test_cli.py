@@ -161,3 +161,24 @@ def test_init_basic():
         result_repeat = runner.invoke(app, ["init"])
         assert result_repeat.exit_code != 0
         assert "already exists" in result_repeat.stdout
+
+def test_add_basic():
+    with runner.isolated_filesystem():
+        # First init
+        runner.invoke(app, ["init"])
+        
+        # Then add
+        result = runner.invoke(app, ["add", "My Smell", "A sample description"])
+        assert result.exit_code == 0
+        assert "Created rule" in result.stdout
+        assert "my-smell.smell.md" in result.stdout
+        
+        rule_file = Path(".codesmells/my-smell.smell.md")
+        assert rule_file.exists()
+        
+        content = rule_file.read_text()
+        assert "tau: 0.4" in content
+        assert "# My Smell" in content
+        assert "A sample description" in content
+        assert "### Anti-Pattern" in content
+        assert "### Refactoring" in content
