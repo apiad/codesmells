@@ -69,7 +69,8 @@ bad_code()
         assert len(rules) == 1
         rule = rules[0]
         assert rule.id == "no_fm"
-        assert rule.tau == 0.8 # default
+        assert rule.tau == 0.4 # default
+
         assert rule.pre_filters == []
         assert rule.anti_patterns == ["bad_code()"]
 

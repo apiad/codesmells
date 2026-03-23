@@ -48,6 +48,44 @@ class StorageManager:
                 break
         self.save_candidates(candidates)
 
+    def update_rule_safe_patterns(self, rule_id: str, template: str):
+        """
+        Appends a new safe template to a rule's .smell.md file.
+        """
+        # We need to find the rule file first.
+        # rules = self.load_rules(str(self.root_dir))
+        # But load_rules doesn't return the file path.
+        # Let's find it manually.
+        file_path = self.root_dir / f"{rule_id}.smell.md"
+        if not file_path.exists():
+            # Try to find it in the current directory's .codesmells
+            file_path = Path(".codesmells") / f"{rule_id}.smell.md"
+            if not file_path.exists():
+                raise FileNotFoundError(f"Rule file for {rule_id} not found.")
+
+        content = file_path.read_text()
+        
+        # We want to append to the ### Safe section.
+        # If the section doesn't exist, we should create it.
+        header = "### Safe"
+        if header in content:
+            # Append before the next section or at the end
+            parts = content.split(header)
+            # Find if there is another ### header in the second part
+            next_header_match = re.search(r"\n###? ", parts[1])
+            if next_header_match:
+                insertion_point = parts[1][:next_header_match.start()]
+                rest = parts[1][next_header_match.start():]
+                new_part = insertion_point.rstrip() + f"\n\n```python\n{template}\n```\n" + rest
+                new_content = parts[0] + header + new_part
+            else:
+                new_content = content.rstrip() + f"\n\n```python\n{template}\n```\n"
+        else:
+            # Add it at the end
+            new_content = content.rstrip() + f"\n\n{header}\n\n```python\n{template}\n```\n"
+        
+        file_path.write_text(new_content)
+
     def _candidate_to_dict(self, c: Candidate) -> dict:
         return {
             "id": c.id,
@@ -123,7 +161,7 @@ class StorageManager:
             rule_id = rule_id[:-9]
             
         pre_filters = frontmatter.get("pre_filters", [])
-        tau = frontmatter.get("tau", 0.8)
+        tau = frontmatter.get("tau", 0.4)
         
         anti_patterns = self._extract_code_blocks(markdown_content, "### Anti-Pattern")
         safe_patterns = self._extract_code_blocks(markdown_content, "### Safe")

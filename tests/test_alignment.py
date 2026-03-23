@@ -62,10 +62,10 @@ def test_align_simple_match():
     # pass matches ...: 0.0
     # Total raw: 2.0 + 0.5 + 2.0 + 2.0 + 2.0 + 0.0 = 8.5
     # Template weights: 1.0 + 1.0 + 1.0 + 1.0 + 1.0 + 0.0 = 5.0
-    # Normalized: 8.5 / 5.0 = 1.7
+    # Normalized: 8.5 / (2.0 * 5.0) = 0.85
     
     score, bindings = engine.align(candidate, template)
-    assert math.isclose(score, 1.7)
+    assert math.isclose(score, 0.85)
 
 def test_align_with_gaps():
     engine = FuzzyAlignmentEngine(gap_open=-2.0, gap_extend=-0.1)
@@ -99,10 +99,10 @@ def test_align_with_gaps():
     # pass matches ... (0.0)
     # Total raw: 2.0 + 1.0 + 2.0 - 2.1 + 2.0 + 2.0 + 0.0 = 6.9
     # Template weights: 1.0 + 0.5 + 1.0 + 1.0 + 1.0 + 0.0 = 4.5
-    # Normalized: 6.9 / 4.5 = 1.5333...
+    # Normalized: 6.9 / (2.0 * 4.5) = 0.7666...
     
     score, _ = engine.align(candidate, template)
-    assert math.isclose(score, 6.9 / 4.5)
+    assert math.isclose(score, 6.9 / 9.0)
 
 def test_align_repeated_sigils_match():
     engine = FuzzyAlignmentEngine()
@@ -123,8 +123,8 @@ def test_align_repeated_sigils_match():
     # match 1: $VAR matches x -> 0.5
     # match 2: = matches = -> 2.0
     # match 3: $VAR matches x -> 0.5
-    # Total: 3.0. Template weights: 1.0 + 1.0 + 1.0 = 3.0. Score: 1.0.
-    assert math.isclose(score, 1.0)
+    # Total: 3.0. Template weights: 1.0 + 1.0 + 1.0 = 3.0. Score: 3.0 / 6.0 = 0.5.
+    assert math.isclose(score, 0.5)
 
 def test_align_repeated_sigils_mismatch():
     engine = FuzzyAlignmentEngine()

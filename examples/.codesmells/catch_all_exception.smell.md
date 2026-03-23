@@ -1,5 +1,5 @@
 ---
-tau: 0.8
+tau: 0.4
 pre_filters:
   - "except Exception"
 ---

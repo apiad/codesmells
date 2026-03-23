@@ -20,12 +20,15 @@ class FuzzyAlignmentEngine:
         Returns:
             The substitution score:
             - 0.0 if te is a GAP.
-            - tc.weight if te is a SIGIL.
+            - tc.weight * 2.0 if both are SIGILs and have same value.
+            - tc.weight if te is a SIGIL (and tc is not same sigil).
             - tc.weight * 2.0 if values match.
             - -infinity otherwise.
         """
         if te.token_class == TokenClass.GAP:
             return 0.0
+        if tc.token_class == TokenClass.SIGIL and te.token_class == TokenClass.SIGIL and tc.value == te.value:
+            return tc.weight * 2.0
         if te.token_class == TokenClass.SIGIL:
             return tc.weight
         if tc.value == te.value:
@@ -129,7 +132,7 @@ class FuzzyAlignmentEngine:
                 if template_weight_sum == 0:
                     normalized_score = 1.0 if score >= 0 else 0.0
                 else:
-                    normalized_score = score / template_weight_sum
+                    normalized_score = score / (2.0 * template_weight_sum)
                 return normalized_score, bindings
 
         return 0.0, {}

@@ -1,5 +1,5 @@
 ---
-tau: 0.5
+tau: 0.4
 pre_filters:
   - "print"
 ---
