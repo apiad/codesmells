@@ -128,7 +128,36 @@ def inspect(id: str):
 def suggest(id: str):
     """Generate refactoring suggestion for a candidate."""
     console.print(f"Generating suggestion for [bold cyan]{id}[/]...")
-    # TODO: Implementation
+    
+    storage = StorageManager()
+    candidates = storage.load_candidates()
+    
+    candidate = next((c for c in candidates if c.id == id), None)
+    if not candidate:
+        console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        raise typer.Exit(code=1)
+        
+    rules = storage.load_rules(str(storage.root_dir))
+    if not rules:
+        rules = storage.load_rules(".")
+        
+    rule = next((r for r in rules if r.id == candidate.rule_id), None)
+    
+    if not rule:
+        console.print(f"[bold red]Error:[/] Rule [bold cyan]{candidate.rule_id}[/] not found.")
+        raise typer.Exit(code=1)
+        
+    if not rule.refactor_template:
+        console.print(f"[bold red]Error:[/] Rule [bold cyan]{rule.id}[/] has no refactoring template.")
+        raise typer.Exit(code=1)
+        
+    hydrated = rule.refactor_template
+    for binding in candidate.bindings:
+        hydrated = hydrated.replace(binding.sigil, binding.bound_value)
+        
+    console.print("\n[bold green]Suggested Refactoring:[/]")
+    syntax = Syntax(hydrated, "python", theme="monokai", line_numbers=True)
+    console.print(Panel(syntax, expand=False))
 
 @app.command()
 def ignore(id: str, template: str = typer.Option(..., help="Template to add to Safe patterns")):

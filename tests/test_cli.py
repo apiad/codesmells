@@ -66,3 +66,80 @@ def bad_func():
         inspect_not_found = runner.invoke(app, ["inspect", "nonexistent_id"])
         assert inspect_not_found.exit_code != 0 or "not found" in inspect_not_found.stdout.lower()
         assert "not found" in inspect_not_found.stdout.lower()
+
+def test_suggest_functional():
+    with runner.isolated_filesystem():
+        Path(".codesmells").mkdir()
+        rule_content = """---
+tau: 0.5
+pre_filters:
+  - "def bad_func"
+---
+### Anti-Pattern
+```python
+def bad_func():
+    $X = 1
+```
+
+### Refactoring
+```python
+def good_func():
+    $X = 2
+```
+"""
+        Path(".codesmells/bad_rule.smell.md").write_text(rule_content)
+        
+        target_content = """
+def bad_func():
+    y = 1
+"""
+        Path("target.py").write_text(target_content)
+        
+        runner.invoke(app, ["scan"])
+        
+        session_file = Path(".codesmells/session.json")
+        data = json.loads(session_file.read_text())
+        c_id = data["candidates"][0]["id"]
+        
+        # Test suggest success
+        suggest_result = runner.invoke(app, ["suggest", c_id])
+        assert suggest_result.exit_code == 0
+        assert "good_func" in suggest_result.stdout
+        assert "y = 2" in suggest_result.stdout
+        
+        # Test suggest not found
+        suggest_not_found = runner.invoke(app, ["suggest", "nonexistent_id"])
+        assert suggest_not_found.exit_code != 0 or "not found" in suggest_not_found.stdout.lower()
+        assert "not found" in suggest_not_found.stdout.lower()
+
+def test_suggest_no_template():
+    with runner.isolated_filesystem():
+        Path(".codesmells").mkdir()
+        rule_content = """---
+tau: 0.5
+pre_filters:
+  - "def bad_func"
+---
+### Anti-Pattern
+```python
+def bad_func():
+    $X = 1
+```
+"""
+        Path(".codesmells/bad_rule.smell.md").write_text(rule_content)
+        
+        target_content = """
+def bad_func():
+    y = 1
+"""
+        Path("target.py").write_text(target_content)
+        
+        runner.invoke(app, ["scan"])
+        
+        session_file = Path(".codesmells/session.json")
+        data = json.loads(session_file.read_text())
+        c_id = data["candidates"][0]["id"]
+        
+        suggest_no_template = runner.invoke(app, ["suggest", c_id])
+        assert suggest_no_template.exit_code != 0 or "no refactoring template" in suggest_no_template.stdout.lower()
+        assert "no refactoring template" in suggest_no_template.stdout.lower()
