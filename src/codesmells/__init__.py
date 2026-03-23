@@ -1,2 +1,4 @@
+from codesmells.cli import app
+
 def main() -> None:
-    print("Hello from codesmells!")
+    app()

@@ -15,7 +15,7 @@ Keep task descriptions short but descriptive. Do not add implementation details,
 ## Active Tasks
 
 - [x] Milestone 1: MVP - Core Engine (Lexer, Smith-Waterman, JSON Storage) (@apiad) (See plan: plans/project-roadmap.md)
-- [/] Milestone 2: Functional CLI - (Scan, Inspect, Suggest) (@apiad) (See plan: plans/project-roadmap.md)
+- [x] Milestone 2: Functional CLI - (Scan, Inspect, Suggest) (@apiad) (See plan: plans/project-roadmap.md)
 - [ ] Milestone 3: Advanced Features - (Ignore with validation, Refactoring templates) (See plan: plans/project-roadmap.md)
 - [ ] Milestone 4: Production Ready - (Performance, Multi-language, Documentation) (See plan: plans/project-roadmap.md)
 
