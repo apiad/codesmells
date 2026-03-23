@@ -1,7 +1,7 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from codesmells.storage import StorageManager
 from codesmells.lexer import ProbabilisticLexer
 from codesmells.alignment import FuzzyAlignmentEngine
@@ -35,13 +35,14 @@ def main(ctx: typer.Context):
         console.print("\n[bold]CORE WORKFLOW[/]")
         console.print("  1. [bold cyan]init[/]          Initialize the .codesmells/ environment.")
         console.print("  2. [bold cyan]add[/]           Create a new rule template from boilerplate.")
-        console.print("  3. [bold cyan]scan[/]          Scan the codebase for detected smells.")
-        console.print("  4. [bold cyan]status[/]        Review detected candidates in the current session.")
-        console.print("  5. [bold cyan]inspect <id>[/]  Examine a specific candidate and its bindings.")
-        console.print("  6. [bold cyan]suggest <id>[/]  Generate a refactored code suggestion.")
-        console.print("  7. [bold cyan]accept <id>[/]   Mark a candidate as addressed.")
-        console.print("  8. [bold cyan]ignore <id>[/]   Mark a candidate as safe (adds to Safe patterns).")
-        console.print("  9. [bold cyan]finish[/]        Complete the session and clear state.")
+        console.print("  3. [bold cyan]validate[/]      Verify rules against their test patterns.")
+        console.print("  4. [bold cyan]scan[/]          Scan the codebase for detected smells.")
+        console.print("  5. [bold cyan]status[/]        Review detected candidates in the current session.")
+        console.print("  6. [bold cyan]inspect <id>[/]  Examine a specific candidate and its bindings.")
+        console.print("  7. [bold cyan]suggest <id>[/]  Generate a refactored code suggestion.")
+        console.print("  8. [bold cyan]accept <id>[/]   Mark a candidate as addressed.")
+        console.print("  9. [bold cyan]ignore <id>[/]   Mark a candidate as safe (adds to Safe patterns).")
+        console.print("  10. [bold cyan]finish[/]       Complete the session and clear state.")
 
         console.print("\n[bold yellow]NEXT STEPS[/]")
         codesmells_dir = Path(".codesmells")
@@ -177,12 +178,113 @@ pre_filters:
 """
     file_path.write_text(template)
 
+    # Create corresponding .test.md
+    test_file_path = codesmells_dir / f"{kebab_name}.smell.test.md"
+    test_template = f"""# Test: {name}
+
+### Anti-Pattern
+<!-- Snippets that MUST match -->
+```python
+# Insert code that should trigger the rule
+```
+
+### Safe
+<!-- Snippets that MUST NOT match -->
+```python
+# Insert code that looks similar but is safe
+```
+"""
+    test_file_path.write_text(test_template)
+
     console.print(f"[bold green]Success:[/] Created rule template at [bold cyan]{file_path}[/].")
-    console.print(f"\n[bold yellow]Next Step:[/] Edit [bold]{file_path}[/] and fill in the following sections:")
+    console.print(f"[bold green]Success:[/] Created test template at [bold cyan]{test_file_path}[/].")
+    console.print(f"\n[bold yellow]Next Step:[/] Edit [bold]{file_path}[/] and [bold]{test_file_path}[/] then fill in the following sections:")
     console.print("  1. [magenta]pre_filters:[/] Add keywords that MUST be present for this rule to apply.")
     console.print("  2. [magenta]Anti-Pattern:[/] Add a Python code block of the code you want to catch.")
     console.print("  3. [magenta]Refactoring:[/] Add a Python code block of the ideal code.")
+    console.print("  4. [magenta]Tests:[/] Add examples to the .test.md file and run [bold green]codesmells validate[/].")
     console.print("\n[dim]Then run [bold]codesmells scan[/] to see your rule in action![/dim]")
+
+@app.command()
+def validate(rule_id: Optional[str] = typer.Argument(None, help="Specific rule ID to validate")):
+    """Validate rule templates against their test patterns."""
+    storage = StorageManager()
+    
+    if rule_id:
+        # Validate specific rule
+        rule_file = storage.root_dir / f"{rule_id}.smell.md"
+        if not rule_file.exists():
+            console.print(f"[bold red]Error:[/] Rule [bold cyan]{rule_id}[/] not found.")
+            raise typer.Exit(code=1)
+        rules = [storage._parse_rule_file(rule_file)]
+    else:
+        # Validate all rules in .codesmells
+        rules = storage.load_rules(str(storage.root_dir))
+        
+    if not rules:
+        console.print("[yellow]No rules found to validate.[/]")
+        return
+
+    lexer = ProbabilisticLexer()
+    engine = FuzzyAlignmentEngine()
+    
+    total_passed = 0
+    total_failed = 0
+    
+    for rule in rules:
+        test = storage.load_rule_test(rule.id)
+        if not test:
+            console.print(f"[yellow]Skipping {rule.id}:[/] No test file found ([dim]{rule.id}.smell.test.md[/dim])")
+            continue
+            
+        console.print(f"Validating [bold cyan]{rule.id}[/]...")
+        rule_passed = True
+        
+        # Test Anti-Patterns (MUST match)
+        for i, ap in enumerate(test.anti_patterns):
+            target_tokens = lexer.tokenize(ap)
+            match_found = False
+            for rule_ap in rule.anti_patterns:
+                template_tokens = lexer.tokenize(rule_ap)
+                score, _, _ = engine.align(target_tokens, template_tokens)
+                if score >= rule.tau:
+                    match_found = True
+                    break
+            
+            if match_found:
+                console.print(f"  [green]✓[/] Anti-Pattern #{i+1} matched (score >= {rule.tau})")
+            else:
+                console.print(f"  [red]✗[/] Anti-Pattern #{i+1} [bold]failed[/] to match (all scores < {rule.tau})")
+                rule_passed = False
+                
+        # Test Safe Patterns (MUST NOT match)
+        for i, safe in enumerate(test.safe_patterns):
+            target_tokens = lexer.tokenize(safe)
+            match_found = False
+            max_score = 0
+            for rule_ap in rule.anti_patterns:
+                template_tokens = lexer.tokenize(rule_ap)
+                score, _, _ = engine.align(target_tokens, template_tokens)
+                max_score = max(max_score, score)
+                if score >= rule.tau:
+                    match_found = True
+                    break
+            
+            if not match_found:
+                console.print(f"  [green]✓[/] Safe Pattern #{i+1} correctly ignored (max score {max_score:.2f} < {rule.tau})")
+            else:
+                console.print(f"  [red]✗[/] Safe Pattern #{i+1} [bold]failed[/]: incorrectly matched (score {max_score:.2f} >= {rule.tau})")
+                rule_passed = False
+
+        if rule_passed:
+            total_passed += 1
+        else:
+            total_failed += 1
+
+    console.print(f"\n[bold]Summary:[/] [green]{total_passed} passed[/], [red]{total_failed} failed[/]")
+    
+    if total_failed > 0:
+        raise typer.Exit(code=1)
 
 @app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):

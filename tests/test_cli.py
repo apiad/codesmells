@@ -23,6 +23,65 @@ def test_scan_basic():
         assert result_with_rules.exit_code == 0
         assert "Scanning" in result_with_rules.stdout
 
+def test_validate_functional():
+    with runner.isolated_filesystem():
+        runner.invoke(app, ["init"])
+        # add creates both .smell.md and .smell.test.md
+        runner.invoke(app, ["add", "Test Smell", "desc"])
+        
+        # Manually fill files with valid data
+        rule_path = Path(".codesmells/test-smell.smell.md")
+        rule_path.write_text("""---
+tau: 0.8
+pre_filters: ["bad_func"]
+---
+### Anti-Pattern
+```python
+def bad_func():
+    pass
+```
+""")
+        
+        test_path = Path(".codesmells/test-smell.smell.test.md")
+        test_path.write_text("""### Anti-Pattern
+```python
+def bad_func():
+    pass
+```
+
+### Safe
+```python
+def good_func():
+    pass
+```
+""")
+        
+        # Test validation success
+        result = runner.invoke(app, ["validate"])
+        assert result.exit_code == 0
+        assert "Validating test-smell" in result.stdout
+        assert "Anti-Pattern #1 matched" in result.stdout
+        assert "Safe Pattern #1 correctly ignored" in result.stdout
+        assert "1 passed" in result.stdout
+        
+        # Test validation failure (lowering tau or changing test to something that matches)
+        test_path.write_text("""### Anti-Pattern
+```python
+def bad_func():
+    pass
+```
+
+### Safe
+```python
+def bad_func():
+    pass
+```
+""")
+        result_fail = runner.invoke(app, ["validate"])
+        assert result_fail.exit_code != 0
+        assert "Safe Pattern #1 failed" in result_fail.stdout
+        assert "1 failed" in result_fail.stdout
+
 import json
 from pathlib import Path
 
