@@ -3,7 +3,7 @@ import yaml
 import re
 from pathlib import Path
 from typing import List, Optional
-from codesmells.models import Rule, Candidate
+from codesmells.models import Rule, Candidate, RuleTest
 
 class StorageManager:
     def __init__(self, root_dir: str = ".codesmells"):
@@ -144,6 +144,34 @@ class StorageManager:
         for f in files:
             rules.append(self._parse_rule_file(f))
         return rules
+
+    def load_rule_test(self, rule_id: str) -> Optional[RuleTest]:
+        """
+        Loads a .smell.test.md file for a specific rule.
+        """
+        file_path = self.root_dir / f"{rule_id}.smell.test.md"
+        if not file_path.exists():
+            # Try to find it in the current directory's .codesmells
+            file_path = Path(".codesmells") / f"{rule_id}.smell.test.md"
+            if not file_path.exists():
+                return None
+
+        return self._parse_rule_test_file(file_path, rule_id)
+
+    def _parse_rule_test_file(self, file_path: Path, rule_id: str) -> RuleTest:
+        """
+        Parses a single .smell.test.md file into a RuleTest object.
+        """
+        content = file_path.read_text()
+        
+        anti_patterns = self._extract_code_blocks(content, "### Anti-Pattern")
+        safe_patterns = self._extract_code_blocks(content, "### Safe")
+        
+        return RuleTest(
+            rule_id=rule_id,
+            anti_patterns=anti_patterns,
+            safe_patterns=safe_patterns
+        )
 
     def _parse_rule_file(self, file_path: Path) -> Rule:
         """
