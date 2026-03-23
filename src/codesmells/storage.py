@@ -17,6 +17,14 @@ class StorageManager:
             with open(self.session_file, 'w') as f:
                 json.dump({"candidates": []}, f)
 
+    def clear_session(self):
+        """
+        Clears the session.json file.
+        """
+        if self.session_file.exists():
+            self.session_file.unlink()
+        self._ensure_session_exists()
+
     def save_candidates(self, candidates: List[Candidate]):
         """
         Saves a list of candidates to the session.json file.

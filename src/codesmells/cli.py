@@ -1,6 +1,7 @@
 import os
 import hashlib
 from pathlib import Path
+from typing import List
 from codesmells.storage import StorageManager
 from codesmells.lexer import ProbabilisticLexer
 from codesmells.alignment import FuzzyAlignmentEngine
@@ -15,12 +16,40 @@ from rich.panel import Panel
 app = typer.Typer(help="CodeSmells: Agentic Architectural Refactoring Tool")
 console = Console()
 
+def print_next_steps(candidates: List[Candidate]):
+    pending = [c for c in candidates if c.status == "PENDING"]
+    if pending:
+        c = pending[0]
+        console.print(f"\n[bold yellow]NEXT STEP:[/] inspect {c.id} OR suggest {c.id}")
+        console.print(f"[dim]Then use 'accept {c.id}' if fixed or 'ignore {c.id}' if safe.[/dim]")
+    else:
+        console.print("\n[bold green]NEXT STEP:[/] finish")
+        console.print("[dim]All candidates have been addressed.[/dim]")
+
+def _print_status_table(candidates: List[Candidate]):
+    table = Table(title="CodeSmells Session Status")
+    table.add_column("ID", style="dim")
+    table.add_column("Rule", style="magenta")
+    table.add_column("File", style="green")
+    table.add_column("Status", style="bold")
+    
+    for c in candidates:
+        status_style = "yellow" if c.status == "PENDING" else "green" if c.status == "ACCEPTED" else "blue"
+        table.add_row(c.id, c.rule_id, c.file_path, f"[{status_style}]{c.status}[/]")
+
+    console.print(table)
+
 @app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     """Scan directory for anti-patterns."""
-    console.print(f"Scanning [bold cyan]{directory}[/]...")
-    
     storage = StorageManager()
+    existing = storage.load_candidates()
+    if any(c.status == "PENDING" for c in existing):
+        console.print("[bold red]Error:[/] A scan session is already in progress with PENDING candidates.")
+        console.print("Use [bold]status[/] to see them, or [bold]finish[/] to clear the current session.")
+        raise typer.Exit(code=1)
+
+    console.print(f"Scanning [bold cyan]{directory}[/]...")
     
     # Try to load rules from the target directory's .codesmells folder first
     target_rules_dir = Path(directory) / ".codesmells"
@@ -92,17 +121,61 @@ def scan(directory: str = typer.Argument(".", help="Directory to scan")):
                         break
 
     storage.save_candidates(candidates)
+    _print_status_table(candidates)
+    print_next_steps(candidates)
 
-    table = Table(title="Pending Candidates")
-    table.add_column("ID", style="dim")
-    table.add_column("Rule", style="magenta")
-    table.add_column("File", style="green")
+@app.command()
+def status():
+    """Show the status of the current scan session."""
+    storage = StorageManager()
+    candidates = storage.load_candidates()
+    if not candidates:
+        console.print("[dim]No active session. Use [bold]scan[/] to start one.[/dim]")
+        return
+        
+    _print_status_table(candidates)
+    print_next_steps(candidates)
+
+@app.command()
+def accept(id: str):
+    """Mark a candidate as solved/accepted."""
+    storage = StorageManager()
+    candidates = storage.load_candidates()
     
-    for c in candidates:
-        table.add_row(c.id, c.rule_id, c.file_path)
+    candidate = next((c for c in candidates if c.id == id), None)
+    if not candidate:
+        console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        raise typer.Exit(code=1)
+        
+    storage.update_candidate_status(id, "ACCEPTED")
+    console.print(f"[bold green]Accepted:[/] Candidate [bold cyan]{id}[/] marked as [bold]ACCEPTED[/].")
+    
+    # Reload and show remaining
+    updated = storage.load_candidates()
+    print_next_steps(updated)
 
-    console.print(table)
-    console.print("\n[bold]NEXT STEP:[/] inspect <id>")
+@app.command()
+def finish():
+    """Finalize the session, print a report, and clear state."""
+    storage = StorageManager()
+    candidates = storage.load_candidates()
+    if not candidates:
+        console.print("[dim]No active session to finish.[/dim]")
+        return
+
+    console.print("[bold cyan]Finalizing Session Report...[/]\n")
+    
+    accepted = [c for c in candidates if c.status == "ACCEPTED"]
+    ignored = [c for c in candidates if c.status == "IGNORED"]
+    pending = [c for c in candidates if c.status == "PENDING"]
+    
+    console.print(f"✅ [bold green]Accepted:[/] {len(accepted)}")
+    console.print(f"🙈 [bold blue]Ignored: [/] {len(ignored)}")
+    if pending:
+        console.print(f"⏳ [bold yellow]Pending: [/] {len(pending)}")
+    
+    storage.clear_session()
+    console.print("\n[bold green]Session cleared.[/] Ready for a new [bold]scan[/].")
 
 @app.command()
 def inspect(id: str):
@@ -118,12 +191,17 @@ def inspect(id: str):
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
-    if not rules:
-        # Try to find rules in the candidate's top-level directory
-        first_dir = Path(candidate.file_path).parts[0]
-        if Path(first_dir).is_dir():
-            rules = storage.load_rules(str(Path(first_dir) / ".codesmells"))
-        
+    
+    # Also look in the directory where the candidate's file is
+    candidate_file_path = Path(candidate.file_path)
+    # Search for .codesmells in any parent of the candidate file up to the current dir
+    curr = candidate_file_path.parent
+    while curr != Path(".") and curr != Path("/"):
+        if (curr / ".codesmells").is_dir():
+            rules.extend(storage.load_rules(str(curr / ".codesmells")))
+        if curr == curr.parent: break
+        curr = curr.parent
+    
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
     
     console.print(f"\n[bold magenta]Rule:[/] {candidate.rule_id}")
@@ -148,6 +226,8 @@ def inspect(id: str):
         console.print(binding_table)
     else:
         console.print("\n[dim]No bindings found.[/dim]")
+    
+    print_next_steps(candidates)
 
 @app.command()
 def suggest(id: str):
@@ -163,12 +243,17 @@ def suggest(id: str):
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
-    if not rules:
-        # Try to find rules in the candidate's top-level directory
-        first_dir = Path(candidate.file_path).parts[0]
-        if Path(first_dir).is_dir():
-            rules = storage.load_rules(str(Path(first_dir) / ".codesmells"))
-        
+    
+    # Also look in the directory where the candidate's file is
+    candidate_file_path = Path(candidate.file_path)
+    # Search for .codesmells in any parent of the candidate file up to the current dir
+    curr = candidate_file_path.parent
+    while curr != Path(".") and curr != Path("/"):
+        if (curr / ".codesmells").is_dir():
+            rules.extend(storage.load_rules(str(curr / ".codesmells")))
+        if curr == curr.parent: break
+        curr = curr.parent
+    
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
     
     if not rule:
@@ -194,6 +279,8 @@ def suggest(id: str):
     console.print("\n[bold green]Suggested Refactoring:[/]")
     syntax = Syntax(hydrated, "python", theme="monokai", line_numbers=True)
     console.print(Panel(syntax, expand=False))
+    
+    print_next_steps(candidates)
 
 @app.command()
 def ignore(id: str, template: str = typer.Option(..., help="Template to add to Safe patterns")):
@@ -209,12 +296,17 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
-    if not rules:
-        # Try to find rules in the candidate's top-level directory
-        first_dir = Path(candidate.file_path).parts[0]
-        if Path(first_dir).is_dir():
-            rules = storage.load_rules(str(Path(first_dir) / ".codesmells"))
-        
+    
+    # Also look in the directory where the candidate's file is
+    candidate_file_path = Path(candidate.file_path)
+    # Search for .codesmells in any parent of the candidate file up to the current dir
+    curr = candidate_file_path.parent
+    while curr != Path(".") and curr != Path("/"):
+        if (curr / ".codesmells").is_dir():
+            rules.extend(storage.load_rules(str(curr / ".codesmells")))
+        if curr == curr.parent: break
+        curr = curr.parent
+    
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
     
     if not rule:
@@ -251,6 +343,10 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
         storage.update_rule_safe_patterns(rule.id, template)
         storage.update_candidate_status(id, "IGNORED")
         console.print(f"[bold green]Success:[/] Candidate [bold cyan]{id}[/] marked as [bold]IGNORED[/] and template added to [bold]{rule.id}.smell.md[/]")
+        
+        # Reload and show remaining
+        updated = storage.load_candidates()
+        print_next_steps(updated)
     except Exception as e:
         console.print(f"[bold red]Error:[/] Failed to update rule: {e}")
         raise typer.Exit(code=1)
