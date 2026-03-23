@@ -9,9 +9,19 @@ def test_scan_help():
     assert "Scan directory for anti-patterns" in result.stdout
 
 def test_scan_basic():
-    result = runner.invoke(app, ["scan"])
-    assert result.exit_code == 0
-    assert "Scanning" in result.stdout
+    with runner.isolated_filesystem():
+        # Without rules, it should fail with helpful message
+        result = runner.invoke(app, ["scan"])
+        assert result.exit_code != 0
+        assert "No rule templates found" in result.stdout
+        
+        # Now init and add a rule
+        runner.invoke(app, ["init"])
+        runner.invoke(app, ["add", "Test Rule", "desc"])
+        
+        result_with_rules = runner.invoke(app, ["scan"])
+        assert result_with_rules.exit_code == 0
+        assert "Scanning" in result_with_rules.stdout
 
 import json
 from pathlib import Path

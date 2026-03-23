@@ -204,7 +204,13 @@ def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     if not rules:
         rules = storage.load_rules(str(storage.root_dir))
 
+    if not rules:
+        console.print("[bold red]Error:[/] No rule templates found to scan with.")
+        console.print("Use [bold green]codesmells add <name> <description>[/] to create your first rule.")
+        raise typer.Exit(code=1)
+
     lexer = ProbabilisticLexer()
+
     engine = FuzzyAlignmentEngine()
     candidates = []
 
