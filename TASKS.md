@@ -20,7 +20,8 @@ Keep task descriptions short but descriptive. Do not add implementation details,
 - [x] Rule Documentation: Display description and explanation in `inspect`/`suggest` (@apiad)
 - [x] Session Management: Added `status`, `accept`, `finish` and next-step guidance (@apiad)
 - [/] Milestone 4: Production Ready - (Performance, Multi-language, Documentation) (See plan: plans/project-roadmap.md)
-- [ ] Add `init` and `add` commands for onboarding (@apiad) (See plan: plans/implement-init-and-add-commands.md)
+- [x] Add `init` and `add` commands for onboarding (@apiad) (See plan: plans/implement-init-and-add-commands.md)
+- [ ] Implement `validate` command with rule testing suite (@apiad) (See plan: plans/implement-rule-validation.md)
 
 ---
 
