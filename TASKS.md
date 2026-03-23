@@ -23,7 +23,7 @@ Keep task descriptions short but descriptive. Do not add implementation details,
 - [x] Add `init` and `add` commands for onboarding (@apiad) (See plan: plans/implement-init-and-add-commands.md)
 - [x] Implement `validate` command with rule testing suite (@apiad) (See plan: plans/implement-rule-validation.md)
 - [x] Add `install-skill` command for AI agent onboarding (@apiad) (See plan: plans/install-skill-command.md)
-- [ ] Implement comprehensive example knowledge base (10 languages, 50 smells) (@apiad) (See plan: plans/implement-comprehensive-examples.md)
+- [/] In Progress (@apiad) Implement comprehensive example knowledge base (10 languages, 50 smells) (See plan: plans/implement-comprehensive-examples.md)
 
 ---
 
