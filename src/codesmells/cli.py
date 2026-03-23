@@ -342,7 +342,7 @@ def validate(path_or_id: Optional[str] = typer.Argument(None, help="Path to a di
             total_passed += 1
         else:
             # Failure: overlapping scores
-            console.print(f"  [red]✗[/] [bold]Failure:[/] Overlapping scores. Cannot distinguish between bad and good examples.")
+            console.print("  [red]✗[/] [bold]Failure:[/] Overlapping scores. Cannot distinguish between bad and good examples.")
             overlap_anti_idx = anti_scores.index(min_anti)
             overlap_safe_idx = safe_scores.index(max_safe)
             console.print(f"    - Lowest Anti-Pattern (#{overlap_anti_idx+1}): [red]{min_anti:.2f}[/]")
