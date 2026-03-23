@@ -13,8 +13,54 @@ from rich.table import Table
 from rich.syntax import Syntax
 from rich.panel import Panel
 
-app = typer.Typer(help="CodeSmells: Agentic Architectural Refactoring Tool")
+app = typer.Typer(
+    help="CodeSmells: Agentic Architectural Refactoring Tool",
+    no_args_is_help=True
+)
 console = Console()
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """CodeSmells: Agentic Architectural Refactoring Tool"""
+    if ctx.invoked_subcommand is None:
+        console.print(Panel.fit(
+            "[bold cyan]CodeSmells[/] - Agentic Architectural Refactoring Tool",
+            subtitle="v0.1.0"
+        ))
+        
+        console.print("\n[bold]DESCRIPTION[/]")
+        console.print("  CodeSmells uses fuzzy alignment and probabilistic lexing to detect")
+        console.print("  architectural anti-patterns in your Python codebase and suggest")
+        console.print("  refactorings based on expert rule templates.")
+
+        console.print("\n[bold]CORE WORKFLOW[/]")
+        console.print("  1. [bold cyan]init[/]          Initialize the .codesmells/ environment.")
+        console.print("  2. [bold cyan]add[/]           Create a new rule template from boilerplate.")
+        console.print("  3. [bold cyan]scan[/]          Scan the codebase for detected smells.")
+        console.print("  4. [bold cyan]status[/]        Review detected candidates in the current session.")
+        console.print("  5. [bold cyan]inspect <id>[/]  Examine a specific candidate and its bindings.")
+        console.print("  6. [bold cyan]suggest <id>[/]  Generate a refactored code suggestion.")
+        console.print("  7. [bold cyan]accept <id>[/]   Mark a candidate as addressed.")
+        console.print("  8. [bold cyan]ignore <id>[/]   Mark a candidate as safe (adds to Safe patterns).")
+        console.print("  9. [bold cyan]finish[/]        Complete the session and clear state.")
+
+        console.print("\n[bold yellow]NEXT STEPS[/]")
+        codesmells_dir = Path(".codesmells")
+        if not codesmells_dir.exists():
+            console.print("  ➜ Start by running [bold green]codesmells init[/] to set up your project.")
+        else:
+            storage = StorageManager()
+            candidates = storage.load_candidates()
+            if not candidates:
+                console.print("  ➜ Run [bold green]codesmells scan[/] to find architectural smells.")
+            else:
+                pending = [c for c in candidates if c.status == "PENDING"]
+                if pending:
+                    console.print(f"  ➜ You have [bold yellow]{len(pending)}[/] pending candidates. Use [bold green]codesmells status[/] to review them.")
+                else:
+                    console.print("  ➜ All candidates addressed. Run [bold green]codesmells finish[/] to wrap up.")
+
+        console.print("\n[dim]Use 'codesmells <command> --help' for more information on a specific command.[/dim]")
 
 def print_next_steps(candidates: List[Candidate]):
     pending = [c for c in candidates if c.status == "PENDING"]
@@ -25,6 +71,24 @@ def print_next_steps(candidates: List[Candidate]):
     else:
         console.print("\n[bold green]NEXT STEP:[/] finish")
         console.print("[dim]All candidates have been addressed.[/dim]")
+
+def suggest_alternative_ids(invalid_id: str, candidates: List[Candidate]):
+    """Suggests valid IDs when an invalid one is provided."""
+    if not candidates:
+        console.print("[dim]No active session or candidates found.[/dim]")
+        return
+
+    # Sort by simple string distance (or just show all if few)
+    import difflib
+    valid_ids = [c.id for c in candidates]
+    matches = difflib.get_close_matches(invalid_id, valid_ids, n=3, cutoff=0.3)
+    
+    if matches:
+        console.print(f"[bold yellow]Did you mean one of these?[/] {', '.join(f'[bold cyan]{m}[/]' for m in matches)}")
+    else:
+        console.print(f"[bold yellow]Available IDs:[/] {', '.join(f'[bold cyan]{c.id}[/]' for c in candidates[:10])}")
+    
+    console.print("\n[dim]Run 'codesmells status' to see the full list of candidates.[/dim]")
 
 def _print_status_table(candidates: List[Candidate]):
     table = Table(title="CodeSmells Session Status")
@@ -217,6 +281,7 @@ def accept(id: str):
     candidate = next((c for c in candidates if c.id == id), None)
     if not candidate:
         console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        suggest_alternative_ids(id, candidates)
         raise typer.Exit(code=1)
         
     storage.update_candidate_status(id, "ACCEPTED")
@@ -260,6 +325,7 @@ def inspect(id: str):
     candidate = next((c for c in candidates if c.id == id), None)
     if not candidate:
         console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        suggest_alternative_ids(id, candidates)
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
@@ -312,6 +378,7 @@ def suggest(id: str):
     candidate = next((c for c in candidates if c.id == id), None)
     if not candidate:
         console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        suggest_alternative_ids(id, candidates)
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
@@ -365,6 +432,7 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
     candidate = next((c for c in candidates if c.id == id), None)
     if not candidate:
         console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        suggest_alternative_ids(id, candidates)
         raise typer.Exit(code=1)
         
     rules = storage.load_rules(str(storage.root_dir))
