@@ -52,7 +52,8 @@ def init():
     gitignore_file.write_text("session.json\n")
     
     console.print(f"[bold green]Success:[/] Initialized CodeSmells in {codesmells_dir}/.")
-    console.print("[bold yellow]Next Step:[/] Use 'add <name> <description>' to create your first rule.")
+    console.print("[bold yellow]Next Step:[/] Use [bold]codesmells add <name> <description>[/] to create your first rule template.")
+    console.print("[dim]Example: codesmells add \"Catch All Exception\" \"Avoid using bare except: or except Exception:\"[/dim]")
 
 @app.command()
 def add(name: str, description: str):
@@ -104,7 +105,11 @@ pre_filters:
     file_path.write_text(template)
     
     console.print(f"[bold green]Success:[/] Created rule template at [bold cyan]{file_path}[/].")
-    console.print("[bold yellow]Next Step:[/] Edit the file to define your anti-pattern and refactoring template.")
+    console.print(f"\n[bold yellow]Next Step:[/] Edit [bold]{file_path}[/] and fill in the following sections:")
+    console.print("  1. [magenta]pre_filters:[/] Add keywords that MUST be present for this rule to apply.")
+    console.print("  2. [magenta]Anti-Pattern:[/] Add a Python code block of the code you want to catch.")
+    console.print("  3. [magenta]Refactoring:[/] Add a Python code block of the ideal code.")
+    console.print("\n[dim]Then run [bold]codesmells scan[/] to see your rule in action![/dim]")
 
 @app.command()
 def scan(directory: str = typer.Argument(".", help="Directory to scan")):

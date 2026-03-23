@@ -149,6 +149,7 @@ def test_init_basic():
         result = runner.invoke(app, ["init"])
         assert result.exit_code == 0
         assert "Initialized CodeSmells" in result.stdout
+        assert "codesmells add" in result.stdout
         
         codesmells_dir = Path(".codesmells")
         assert codesmells_dir.is_dir()
@@ -172,6 +173,8 @@ def test_add_basic():
         assert result.exit_code == 0
         assert "Created rule" in result.stdout
         assert "my-smell.smell.md" in result.stdout
+        assert "Next Step:" in result.stdout
+        assert "pre_filters" in result.stdout
         
         rule_file = Path(".codesmells/my-smell.smell.md")
         assert rule_file.exists()
