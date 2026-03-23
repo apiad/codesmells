@@ -36,6 +36,7 @@ class Binding:
 @dataclass
 class Rule:
     id: str
+    tau: float = 0.8
     pre_filters: List[str] = field(default_factory=list)
     anti_patterns: List[str] = field(default_factory=list)
     safe_patterns: List[str] = field(default_factory=list)
