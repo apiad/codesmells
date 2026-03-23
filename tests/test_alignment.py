@@ -103,3 +103,49 @@ def test_align_with_gaps():
     
     score, _ = engine.align(candidate, template)
     assert math.isclose(score, 6.9 / 4.5)
+
+def test_align_repeated_sigils_match():
+    engine = FuzzyAlignmentEngine()
+    # x = x
+    candidate = [
+        Token(TokenClass.IDENTIFIER, "x", weight=0.5),
+        Token(TokenClass.OPERATOR, "=", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "x", weight=0.5),
+    ]
+    # $VAR = $VAR
+    template = [
+        Token(TokenClass.SIGIL, "$VAR", weight=1.0),
+        Token(TokenClass.OPERATOR, "=", weight=1.0),
+        Token(TokenClass.SIGIL, "$VAR", weight=1.0),
+    ]
+    score, bindings = engine.align(candidate, template)
+    assert bindings == {"$VAR": "x"}
+    # match 1: $VAR matches x -> 0.5
+    # match 2: = matches = -> 2.0
+    # match 3: $VAR matches x -> 0.5
+    # Total: 3.0. Template weights: 1.0 + 1.0 + 1.0 = 3.0. Score: 1.0.
+    assert math.isclose(score, 1.0)
+
+def test_align_repeated_sigils_mismatch():
+    engine = FuzzyAlignmentEngine()
+    # x = y
+    candidate = [
+        Token(TokenClass.IDENTIFIER, "x", weight=0.5),
+        Token(TokenClass.OPERATOR, "=", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "y", weight=0.5),
+    ]
+    # $VAR = $VAR
+    template = [
+        Token(TokenClass.SIGIL, "$VAR", weight=1.0),
+        Token(TokenClass.OPERATOR, "=", weight=1.0),
+        Token(TokenClass.SIGIL, "$VAR", weight=1.0),
+    ]
+    score, bindings = engine.align(candidate, template)
+    # The path where $VAR matches x and $VAR matches y should be rejected.
+    # If the path is rejected, the score should not include those matches.
+    # Possible alternative alignments:
+    # 1. "=" matches "=": score 2.0. Norm: 2.0 / 3.0 = 0.666
+    # 2. "$VAR =" matches "x =": score 2.5. Norm: 2.5 / 3.0 = 0.833
+    # 3. "= $VAR" matches "= y": score 2.5. Norm: 2.5 / 3.0 = 0.833
+    assert score < 1.0
+    assert bindings == {"$VAR": "x"} or bindings == {"$VAR": "y"}
