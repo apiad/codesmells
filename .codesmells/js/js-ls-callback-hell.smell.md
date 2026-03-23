@@ -12,6 +12,8 @@ tau: 0.34
 
 ### Anti-Pattern
 
+This code example demonstrates the Callback Hell anti-pattern.
+
 ```javascript
 $F1(..., function($R1) {
     $F2(..., function($R2) {
@@ -25,6 +27,8 @@ $F1(..., function($R1) {
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Callback Hell anti-pattern.
 
 ```javascript
 $F1(..., ($R1) => {

@@ -11,6 +11,8 @@ tau: 0.44
 
 ### Anti-Pattern
 
+This code example demonstrates the God Object anti-pattern.
+
 ```python
 class $GOD:
     def $M1(...): ...

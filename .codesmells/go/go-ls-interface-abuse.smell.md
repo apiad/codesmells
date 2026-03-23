@@ -12,11 +12,15 @@ tau: 0.44
 
 ### Anti-Pattern
 
+This code example demonstrates the Interface{} Abuse anti-pattern.
+
 ```go
 func $FUNC(data interface{}) {
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Interface{} Abuse anti-pattern.
 
 ```go
 type $NAME struct {

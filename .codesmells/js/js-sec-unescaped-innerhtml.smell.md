@@ -11,6 +11,8 @@ tau: 0.70
 
 ### Anti-Pattern
 
+This code example demonstrates the Unescaped innerHTML anti-pattern.
+
 ```javascript
 .innerHTML =
 ```

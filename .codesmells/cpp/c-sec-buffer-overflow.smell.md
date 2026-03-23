@@ -13,17 +13,23 @@ tau: 0.67
 
 ### Anti-Pattern
 
+This code example demonstrates the Potential Buffer Overflow anti-pattern.
+
 ```c
 strcpy($DEST, $SRC)
 ```
 
 ### Anti-Pattern
 
+This code example demonstrates the Potential Buffer Overflow anti-pattern.
+
 ```c
 gets($BUF)
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Potential Buffer Overflow anti-pattern.
 
 ```c
 sprintf($BUF, $FORMAT, ...)

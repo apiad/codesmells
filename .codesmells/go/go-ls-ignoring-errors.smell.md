@@ -12,11 +12,15 @@ tau: 0.45
 
 ### Anti-Pattern
 
+This code example demonstrates the Ignoring Errors anti-pattern.
+
 ```go
 $VAL, _ := $FUNC(...)
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Ignoring Errors anti-pattern.
 
 ```go
 $VAL, _ = $FUNC(...)

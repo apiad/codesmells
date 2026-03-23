@@ -11,11 +11,15 @@ tau: 0.83
 
 ### Anti-Pattern
 
+This code example demonstrates the Any-script Usage anti-pattern.
+
 ```typescript
 : any
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Any-script Usage anti-pattern.
 
 ```typescript
 as any

@@ -11,6 +11,8 @@ tau: 0.83
 
 ### Anti-Pattern
 
+This code example demonstrates the Print instead of Logging anti-pattern.
+
 ```python
 print(
 ```

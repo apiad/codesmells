@@ -11,6 +11,8 @@ tau: 0.61
 
 ### Anti-Pattern
 
+This code example demonstrates the Non-idiomatic Loops anti-pattern.
+
 ```python
 for $I in range(len($L)):
 ```

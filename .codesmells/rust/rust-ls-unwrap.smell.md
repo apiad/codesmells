@@ -11,6 +11,8 @@ tau: 0.67
 
 ### Anti-Pattern
 
+This code example demonstrates the Unnecessary Unwrap anti-pattern.
+
 ```rust
 $VAR.unwrap()
 ```

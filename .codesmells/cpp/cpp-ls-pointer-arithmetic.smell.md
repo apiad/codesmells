@@ -13,11 +13,15 @@ tau: 0.42
 
 ### Anti-Pattern
 
+This code example demonstrates the Unsafe Pointer Arithmetic anti-pattern.
+
 ```cpp
 $PTR = $BASE + $OFFSET;
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Unsafe Pointer Arithmetic anti-pattern.
 
 ```cpp
 $PTR++;

@@ -12,6 +12,8 @@ tau: 0.28
 
 ### Anti-Pattern
 
+This code example demonstrates the Manual Memory Management (Non-RAII) anti-pattern.
+
 ```cpp
 $TYPE* $VAR = new $TYPE(...);
 ...
@@ -19,6 +21,8 @@ delete $VAR;
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Manual Memory Management (Non-RAII) anti-pattern.
 
 ```cpp
 $TYPE* $VAR = ($TYPE*)malloc(sizeof($TYPE));

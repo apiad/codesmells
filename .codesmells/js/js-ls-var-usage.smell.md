@@ -11,11 +11,15 @@ tau: 0.48
 
 ### Anti-Pattern
 
+This code example demonstrates the Var Usage anti-pattern.
+
 ```javascript
 var $VAR = $VALUE
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Var Usage anti-pattern.
 
 ```javascript
 var $VAR;

@@ -11,17 +11,23 @@ tau: 0.75
 
 ### Anti-Pattern
 
+This code example demonstrates the Broad Exception Catching anti-pattern.
+
 ```python
 except Exception as $E:
 ```
 
 ### Anti-Pattern
 
+This code example demonstrates the Broad Exception Catching anti-pattern.
+
 ```python
 except Exception:
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Broad Exception Catching anti-pattern.
 
 ```python
 except:

@@ -12,6 +12,8 @@ tau: 0.46
 
 ### Anti-Pattern
 
+This code example demonstrates the Tight Coupling (New-ing dependencies) anti-pattern.
+
 ```javascript
 this.$DEP = new $CLASS(...)
 ```

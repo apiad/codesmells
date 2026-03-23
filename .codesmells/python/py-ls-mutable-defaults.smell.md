@@ -11,11 +11,15 @@ tau: 0.60
 
 ### Anti-Pattern
 
+This code example demonstrates the Mutable Default Arguments anti-pattern.
+
 ```python
 def $NAME(... $ARG = []):
 ```
 
 ### Anti-Pattern
+
+This code example demonstrates the Mutable Default Arguments anti-pattern.
 
 ```python
 def $NAME(... $ARG = {}):
