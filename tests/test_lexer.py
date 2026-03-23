@@ -66,19 +66,18 @@ def test_tokenize_literals():
 
 def test_tokenize_complex_line():
     lexer = ProbabilisticLexer()
-    # Adding spaces to avoid clustering of usually separate operators if we want to test them individually,
-    # or just accept the clustering.
     code = 'def $NAME(x): ... return "done"'
     tokens = lexer.tokenize(code)
     
     # Expected token classes in order (skipping whitespace)
-    # Note: '):' will be clustered into one OPERATOR token because there's no space
+    # Note: '):' is no longer clustered
     expected_classes = [
         TokenClass.KEYWORD,    # def
         TokenClass.SIGIL,      # $NAME
         TokenClass.OPERATOR,   # (
         TokenClass.IDENTIFIER, # x
-        TokenClass.OPERATOR,   # ):
+        TokenClass.OPERATOR,   # )
+        TokenClass.OPERATOR,   # :
         TokenClass.GAP,        # ...
         TokenClass.KEYWORD,    # return
         TokenClass.LITERAL     # "done"

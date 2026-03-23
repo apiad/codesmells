@@ -22,14 +22,15 @@ class ProbabilisticLexer:
 
         # Cascading fallback regex patterns as per design spec
         # 1. Gaps & Sigils
-        # 2. Operators (non-alphanumeric clusters)
-        # 3. Keywords
-        # 4. Identifiers
-        # 5. Literals
+        # 2. Common multi-character operators (order matters)
+        # 3. Single-character operators (less greedy)
+        # 4. Keywords
+        # 5. Identifiers
+        # 6. Literals
         self.patterns = [
             (r"\.\.\.", TokenClass.GAP, 1.0),
             (r"\$[A-Z0-9_]+", TokenClass.SIGIL, 1.0),
-            (r"[^\w\s\"']+", TokenClass.OPERATOR, 1.0),
+            (r"(==|!=|<=|>=|=>|\*\*|//|&&|\|\||<<|>>|[^\w\s\"'])", TokenClass.OPERATOR, 1.0),
             (kw_pattern, TokenClass.KEYWORD, 1.0),
             (r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", TokenClass.IDENTIFIER, 0.5),
             (r"(\d+\.?\d*|\"[^\"]*\"|'[^']*')", TokenClass.LITERAL, 0.2),
