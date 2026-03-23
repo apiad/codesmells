@@ -31,3 +31,75 @@ def test_score_match_mismatched_types():
     tc = Token(TokenClass.IDENTIFIER, "my_var", weight=0.5)
     te = Token(TokenClass.KEYWORD, "if", weight=1.0)
     assert engine.score_match(tc, te) == float("-inf")
+
+def test_align_simple_match():
+    engine = FuzzyAlignmentEngine()
+    # def foo(): pass
+    candidate = [
+        Token(TokenClass.KEYWORD, "def", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "foo", weight=0.5),
+        Token(TokenClass.OPERATOR, "(", weight=1.0),
+        Token(TokenClass.OPERATOR, ")", weight=1.0),
+        Token(TokenClass.OPERATOR, ":", weight=1.0),
+        Token(TokenClass.KEYWORD, "pass", weight=1.0),
+    ]
+    # def $NAME(): ...
+    template = [
+        Token(TokenClass.KEYWORD, "def", weight=1.0),
+        Token(TokenClass.SIGIL, "$NAME", weight=1.0),
+        Token(TokenClass.OPERATOR, "(", weight=1.0),
+        Token(TokenClass.OPERATOR, ")", weight=1.0),
+        Token(TokenClass.OPERATOR, ":", weight=1.0),
+        Token(TokenClass.GAP, "...", weight=0.0),
+    ]
+    
+    # Expected scores:
+    # def matches def: 1.0 * 2 = 2.0
+    # foo matches $NAME: 0.5
+    # ( matches (: 1.0 * 2 = 2.0
+    # ) matches ): 1.0 * 2 = 2.0
+    # : matches :: 1.0 * 2 = 2.0
+    # pass matches ...: 0.0
+    # Total raw: 2.0 + 0.5 + 2.0 + 2.0 + 2.0 + 0.0 = 8.5
+    # Template weights: 1.0 + 1.0 + 1.0 + 1.0 + 1.0 + 0.0 = 5.0
+    # Normalized: 8.5 / 5.0 = 1.7
+    
+    score, bindings = engine.align(candidate, template)
+    assert math.isclose(score, 1.7)
+
+def test_align_with_gaps():
+    engine = FuzzyAlignmentEngine(gap_open=-2.0, gap_extend=-0.1)
+    # def foo(x): pass
+    candidate = [
+        Token(TokenClass.KEYWORD, "def", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "foo", weight=0.5),
+        Token(TokenClass.OPERATOR, "(", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "x", weight=0.5),
+        Token(TokenClass.OPERATOR, ")", weight=1.0),
+        Token(TokenClass.OPERATOR, ":", weight=1.0),
+        Token(TokenClass.KEYWORD, "pass", weight=1.0),
+    ]
+    # def foo(): ...
+    template = [
+        Token(TokenClass.KEYWORD, "def", weight=1.0),
+        Token(TokenClass.IDENTIFIER, "foo", weight=0.5),
+        Token(TokenClass.OPERATOR, "(", weight=1.0),
+        Token(TokenClass.OPERATOR, ")", weight=1.0),
+        Token(TokenClass.OPERATOR, ":", weight=1.0),
+        Token(TokenClass.GAP, "...", weight=0.0),
+    ]
+    
+    # Expected alignment:
+    # def matches def (2.0)
+    # foo matches foo (1.0)
+    # ( matches ( (2.0)
+    # x is a gap in template (-2.1)
+    # ) matches ) (2.0)
+    # : matches : (2.0)
+    # pass matches ... (0.0)
+    # Total raw: 2.0 + 1.0 + 2.0 - 2.1 + 2.0 + 2.0 + 0.0 = 6.9
+    # Template weights: 1.0 + 0.5 + 1.0 + 1.0 + 1.0 + 0.0 = 4.5
+    # Normalized: 6.9 / 4.5 = 1.5333...
+    
+    score, _ = engine.align(candidate, template)
+    assert math.isclose(score, 6.9 / 4.5)
