@@ -4,7 +4,7 @@ title: Mutable Default Arguments
 description: Using mutable objects like `[]` or `{}` as default arguments in Python leads to unexpected state sharing across all function calls. This often causes subtle, hard-to-trace bugs where data from previous calls persists in subsequent ones.
 pre_filters:
   - "def"
-tau: 0.54
+tau: 0.60
 ---
 
 # Mutable Default Arguments
@@ -12,13 +12,13 @@ tau: 0.54
 ### Anti-Pattern
 
 ```python
-def $NAME(... $ARG = [])
+def $NAME(... $ARG = []):
 ```
 
 ### Anti-Pattern
 
 ```python
-def $NAME(... $ARG = {})
+def $NAME(... $ARG = {}):
 ```
 
 ### Refactoring

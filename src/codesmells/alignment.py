@@ -77,8 +77,14 @@ class FuzzyAlignmentEngine:
                 te = template[j-1]
                 
                 # E[i][j] = gap in template (insertion in candidate)
-                h_open = H[i-1][j] + gamma + epsilon
-                e_ext = E[i-1][j] + epsilon
+                # If template token is a GAP, it acts as a greedy wildcard (zero penalty)
+                if te.token_class == TokenClass.GAP:
+                    h_open = H[i-1][j] 
+                    e_ext = E[i-1][j]
+                else:
+                    h_open = H[i-1][j] + gamma + epsilon
+                    e_ext = E[i-1][j] + epsilon
+
                 if h_open >= e_ext:
                     E[i][j] = h_open
                     E_ptr[i][j] = 1
