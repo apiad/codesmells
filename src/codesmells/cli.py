@@ -9,6 +9,8 @@ from codesmells.models import Candidate, Binding
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.syntax import Syntax
+from rich.panel import Panel
 
 app = typer.Typer(help="CodeSmells: Agentic Architectural Refactoring Tool")
 console = Console()
@@ -86,7 +88,41 @@ def scan(directory: str = "."):
 def inspect(id: str):
     """Inspect a candidate and its bindings."""
     console.print(f"Inspecting candidate [bold cyan]{id}[/]...")
-    # TODO: Implementation
+    
+    storage = StorageManager()
+    candidates = storage.load_candidates()
+    
+    candidate = next((c for c in candidates if c.id == id), None)
+    if not candidate:
+        console.print(f"[bold red]Error:[/] Candidate [bold cyan]{id}[/] not found.")
+        raise typer.Exit(code=1)
+        
+    rules = storage.load_rules(str(storage.root_dir))
+    if not rules:
+        rules = storage.load_rules(".")
+        
+    rule = next((r for r in rules if r.id == candidate.rule_id), None)
+    
+    console.print(f"\n[bold magenta]Rule:[/] {candidate.rule_id}")
+    if rule:
+        console.print(f"[dim]Tau: {rule.tau}[/dim]")
+        
+    console.print(f"\n[bold green]File:[/] {candidate.file_path}")
+    
+    console.print("\n[bold]Raw Snippet:[/]")
+    syntax = Syntax(candidate.raw_snippet, "python", theme="monokai", line_numbers=True)
+    console.print(Panel(syntax, expand=False))
+    
+    if candidate.bindings:
+        console.print("\n[bold yellow]Bindings:[/]")
+        binding_table = Table(show_header=True, header_style="bold yellow")
+        binding_table.add_column("Sigil")
+        binding_table.add_column("Bound Value")
+        for b in candidate.bindings:
+            binding_table.add_row(b.sigil, b.bound_value)
+        console.print(binding_table)
+    else:
+        console.print("\n[dim]No bindings found.[/dim]")
 
 @app.command()
 def suggest(id: str):
