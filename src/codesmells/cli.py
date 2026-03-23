@@ -16,14 +16,19 @@ app = typer.Typer(help="CodeSmells: Agentic Architectural Refactoring Tool")
 console = Console()
 
 @app.command()
-def scan(directory: str = "."):
+def scan(directory: str = typer.Argument(".", help="Directory to scan")):
     """Scan directory for anti-patterns."""
     console.print(f"Scanning [bold cyan]{directory}[/]...")
     
     storage = StorageManager()
-    rules = storage.load_rules(str(storage.root_dir))
+    
+    # Try to load rules from the target directory's .codesmells folder first
+    target_rules_dir = Path(directory) / ".codesmells"
+    rules = storage.load_rules(str(target_rules_dir))
+    
+    # Fallback to the global/project .codesmells folder
     if not rules:
-        rules = storage.load_rules(directory)
+        rules = storage.load_rules(str(storage.root_dir))
         
     lexer = ProbabilisticLexer()
     engine = FuzzyAlignmentEngine()
@@ -99,7 +104,10 @@ def inspect(id: str):
         
     rules = storage.load_rules(str(storage.root_dir))
     if not rules:
-        rules = storage.load_rules(".")
+        # Try to find rules in the candidate's top-level directory
+        first_dir = Path(candidate.file_path).parts[0]
+        if Path(first_dir).is_dir():
+            rules = storage.load_rules(str(Path(first_dir) / ".codesmells"))
         
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
     
@@ -139,7 +147,10 @@ def suggest(id: str):
         
     rules = storage.load_rules(str(storage.root_dir))
     if not rules:
-        rules = storage.load_rules(".")
+        # Try to find rules in the candidate's top-level directory
+        first_dir = Path(candidate.file_path).parts[0]
+        if Path(first_dir).is_dir():
+            rules = storage.load_rules(str(Path(first_dir) / ".codesmells"))
         
     rule = next((r for r in rules if r.id == candidate.rule_id), None)
     

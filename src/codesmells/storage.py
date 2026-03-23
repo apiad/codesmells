@@ -157,8 +157,8 @@ class StorageManager:
             # Or just assume the section ends when the next "###" or "##" or "#" appears
             # But the prompt specifically mentions ### headers.
             
-            # Look for next header
-            match = re.search(r"\n#", part)
+            # Look for next header (specifically ### or ##)
+            match = re.search(r"\n##+ ", part)
             section = part[:match.start()] if match else part
             
             # Find code blocks within the section
