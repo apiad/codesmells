@@ -64,7 +64,7 @@ def test_align_simple_match():
     # Template weights: 1.0 + 1.0 + 1.0 + 1.0 + 1.0 + 0.0 = 5.0
     # Normalized: 8.5 / (2.0 * 5.0) = 0.85
     
-    score, bindings = engine.align(candidate, template)
+    score, bindings, _ = engine.align(candidate, template)
     assert math.isclose(score, 0.85)
 
 def test_align_with_gaps():
@@ -101,7 +101,7 @@ def test_align_with_gaps():
     # Template weights: 1.0 + 0.5 + 1.0 + 1.0 + 1.0 + 0.0 = 4.5
     # Normalized: 6.9 / (2.0 * 4.5) = 0.7666...
     
-    score, _ = engine.align(candidate, template)
+    score, _, _ = engine.align(candidate, template)
     assert math.isclose(score, 6.9 / 9.0)
 
 def test_align_repeated_sigils_match():
@@ -118,7 +118,7 @@ def test_align_repeated_sigils_match():
         Token(TokenClass.OPERATOR, "=", weight=1.0),
         Token(TokenClass.SIGIL, "$VAR", weight=1.0),
     ]
-    score, bindings = engine.align(candidate, template)
+    score, bindings, _ = engine.align(candidate, template)
     assert bindings == {"$VAR": "x"}
     # match 1: $VAR matches x -> 0.5
     # match 2: = matches = -> 2.0
@@ -140,7 +140,7 @@ def test_align_repeated_sigils_mismatch():
         Token(TokenClass.OPERATOR, "=", weight=1.0),
         Token(TokenClass.SIGIL, "$VAR", weight=1.0),
     ]
-    score, bindings = engine.align(candidate, template)
+    score, bindings, _ = engine.align(candidate, template)
     # The path where $VAR matches x and $VAR matches y should be rejected.
     # If the path is rejected, the score should not include those matches.
     # Possible alternative alignments:

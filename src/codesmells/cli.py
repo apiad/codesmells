@@ -55,7 +55,7 @@ def scan(directory: str = typer.Argument(".", help="Directory to scan")):
                     
                 for anti_pattern in rule.anti_patterns:
                     template_tokens = lexer.tokenize(anti_pattern)
-                    score, bindings_dict = engine.align(target_tokens, template_tokens)
+                    score, bindings_dict, indices = engine.align(target_tokens, template_tokens)
                     
                     if score >= rule.tau:
                         c_id = hashlib.md5(f"{rule.id}-{file_path}-{score}".encode()).hexdigest()[:8]
@@ -64,12 +64,27 @@ def scan(directory: str = typer.Argument(".", help="Directory to scan")):
                             for k, v in bindings_dict.items()
                         ] if bindings_dict else []
                         
+                        # Extract snippet around the match
+                        if indices:
+                            start_token_idx, end_token_idx = indices
+                            start_line = target_tokens[start_token_idx].line_num
+                            end_line = target_tokens[end_token_idx].line_num
+                            
+                            # Get content lines
+                            content_lines = content.splitlines()
+                            snippet_start = max(0, start_line - 5)
+                            snippet_end = min(len(content_lines), end_line + 5)
+                            snippet = "\n".join(content_lines[snippet_start:snippet_end])
+                        else:
+                            snippet = content[:500]
+                            start_line = 1
+
                         candidate = Candidate(
                             id=c_id,
                             rule_id=rule.id,
                             file_path=str(file_path),
-                            line_num=1,
-                            raw_snippet=content[:500],
+                            line_num=start_line,
+                            raw_snippet=snippet,
                             status="PENDING",
                             bindings=bindings
                         )
@@ -213,7 +228,7 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
     snippet_tokens = lexer.tokenize(candidate.raw_snippet)
     
     # Validation Gate 1: S(template, raw_snippet) > 0.7
-    score, _ = engine.align(snippet_tokens, template_tokens)
+    score, _, _ = engine.align(snippet_tokens, template_tokens)
     if score < 0.7:
         console.print(f"[bold red]Validation Failure (Gate 1):[/] Template similarity to snippet is [bold yellow]{score:.2f}[/] (Expected > 0.7)")
         raise typer.Exit(code=1)
@@ -226,7 +241,7 @@ def ignore(id: str, template: str = typer.Option(..., help="Template to add to S
     # Validation Gate 3: S(template, anti_pattern) < 0.9
     for anti_pattern in rule.anti_patterns:
         ap_tokens = lexer.tokenize(anti_pattern)
-        ap_score, _ = engine.align(ap_tokens, template_tokens)
+        ap_score, _, _ = engine.align(ap_tokens, template_tokens)
         if ap_score > 0.9:
             console.print(f"[bold red]Validation Failure (Gate 3):[/] Template is too similar to an anti-pattern ([bold yellow]{ap_score:.2f}[/] > 0.9)")
             raise typer.Exit(code=1)

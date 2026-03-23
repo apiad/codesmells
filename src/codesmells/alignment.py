@@ -35,7 +35,7 @@ class FuzzyAlignmentEngine:
             return tc.weight * 2.0
         return float('-inf')
 
-    def align(self, candidate: List[Token], template: List[Token]) -> Tuple[float, Dict[str, str]]:
+    def align(self, candidate: List[Token], template: List[Token]) -> Tuple[float, Dict[str, str], Optional[Tuple[int, int]]]:
         """
         Computes the best alignment score between a candidate and a template.
         Uses Smith-Waterman with affine gap penalties.
@@ -45,13 +45,13 @@ class FuzzyAlignmentEngine:
             template: List of tokens from the template rule.
             
         Returns:
-            A tuple (normalized_score, bindings).
+            A tuple (normalized_score, bindings, (start_token_idx, end_token_idx)).
         """
         n = len(candidate)
         m = len(template)
         
         if m == 0:
-            return 0.0, {}
+            return 0.0, {}, None
 
         # H[i][j] = max score ending at candidate[i-1] and template[j-1]
         # E[i][j] = max score ending with gap in template
@@ -133,9 +133,14 @@ class FuzzyAlignmentEngine:
                     normalized_score = 1.0 if score >= 0 else 0.0
                 else:
                     normalized_score = score / (2.0 * template_weight_sum)
-                return normalized_score, bindings
+                
+                if matches:
+                    start_idx = min(m[0] for m in matches)
+                    end_idx = max(m[0] for m in matches)
+                    return normalized_score, bindings, (start_idx, end_idx)
+                return normalized_score, bindings, None
 
-        return 0.0, {}
+        return 0.0, {}, None
 
     def traceback(self, H_ptr: List[List[int]], E_ptr: List[List[int]], F_ptr: List[List[int]], i: int, j: int) -> List[Tuple[int, int]]:
         """
