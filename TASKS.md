@@ -16,7 +16,8 @@ Keep task descriptions short but descriptive. Do not add implementation details,
 
 - [x] Milestone 1: MVP - Core Engine (Lexer, Smith-Waterman, JSON Storage) (@apiad) (See plan: plans/project-roadmap.md)
 - [x] Milestone 2: Functional CLI - (Scan, Inspect, Suggest) (@apiad) (See plan: plans/project-roadmap.md)
-- [x] Milestone 3: Advanced Features - (Ignore with validation, Refactoring templates) (@apiad) (See plan: plans/project-roadmap.md)
+- [x] Milestone 3: Advanced Features - (Ignore with validation, Refactoring templates) (@apiad)
+- [x] Rule Documentation: Display description and explanation in `inspect`/`suggest` (@apiad)
 - [ ] Milestone 4: Production Ready - (Performance, Multi-language, Documentation) (See plan: plans/project-roadmap.md)
 
 ---

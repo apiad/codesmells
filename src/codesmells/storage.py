@@ -167,16 +167,48 @@ class StorageManager:
         safe_patterns = self._extract_code_blocks(markdown_content, "### Safe")
         refactor_templates = self._extract_code_blocks(markdown_content, "### Refactoring")
         
+        description = self._extract_text_before(markdown_content, "### Anti-Pattern")
+        refactor_explanation = self._extract_text_after(markdown_content, "### Refactoring")
+        
         refactor_template = refactor_templates[0] if refactor_templates else None
         
         return Rule(
             id=rule_id,
             tau=tau,
+            description=description,
             pre_filters=pre_filters,
             anti_patterns=anti_patterns,
             safe_patterns=safe_patterns,
-            refactor_template=refactor_template
+            refactor_template=refactor_template,
+            refactor_explanation=refactor_explanation
         )
+
+    def _extract_text_before(self, content: str, header: str) -> str:
+        """Extracts descriptive text before a specific header."""
+        parts = content.split(header)
+        if len(parts) < 2:
+            return content.strip()
+        
+        text = parts[0]
+        # Remove the main title (# ...)
+        text = re.sub(r"^# .*\n", "", text, flags=re.MULTILINE)
+        return text.strip()
+
+    def _extract_text_after(self, content: str, header: str) -> str:
+        """Extracts descriptive text after a specific header, excluding code blocks."""
+        parts = content.split(header)
+        if len(parts) < 2:
+            return ""
+        
+        section = parts[1]
+        # Find next header
+        match = re.search(r"\n##+ ", section)
+        if match:
+            section = section[:match.start()]
+            
+        # Remove code blocks
+        text = re.sub(r"```(?:\w+)?\n.*?\n```", "", section, flags=re.DOTALL)
+        return text.strip()
 
     def _extract_code_blocks(self, content: str, header: str) -> List[str]:
         """

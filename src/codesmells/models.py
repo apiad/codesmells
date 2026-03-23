@@ -38,7 +38,9 @@ class Candidate:
 class Rule:
     id: str
     tau: float = 0.4
+    description: str = ""
     pre_filters: List[str] = field(default_factory=list)
     anti_patterns: List[str] = field(default_factory=list)
     safe_patterns: List[str] = field(default_factory=list)
     refactor_template: Optional[str] = None
+    refactor_explanation: str = ""

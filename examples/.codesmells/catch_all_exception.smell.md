@@ -28,6 +28,8 @@ except ValueError as $VAR:
 
 ### Refactoring
 
+Using a more specific exception (like `ValueError` or a custom exception) ensures that only the errors you're prepared to handle are caught, while letting others propagate and be properly diagnosed.
+
 ```python
 try:
     ...

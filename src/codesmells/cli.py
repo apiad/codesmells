@@ -114,6 +114,8 @@ def inspect(id: str):
     console.print(f"\n[bold magenta]Rule:[/] {candidate.rule_id}")
     if rule:
         console.print(f"[dim]Tau: {rule.tau}[/dim]")
+        if rule.description:
+            console.print(f"\n[bold yellow]Description:[/]\n{rule.description}")
         
     console.print(f"\n[bold green]File:[/] {candidate.file_path}")
     
@@ -171,6 +173,9 @@ def suggest(id: str):
         pattern = re.escape(binding.sigil) + r"\b"
         hydrated = re.sub(pattern, binding.bound_value, hydrated)
         
+    if rule.refactor_explanation:
+        console.print(f"\n[bold yellow]Explanation:[/]\n{rule.refactor_explanation}")
+
     console.print("\n[bold green]Suggested Refactoring:[/]")
     syntax = Syntax(hydrated, "python", theme="monokai", line_numbers=True)
     console.print(Panel(syntax, expand=False))
