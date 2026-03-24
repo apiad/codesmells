@@ -24,7 +24,7 @@ def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
         console.print(Panel.fit(
             "[bold cyan]CodeSmells[/] - Agentic Architectural Refactoring Tool",
-            subtitle="v0.2.0"
+            subtitle="v0.3.0"
         ))
 
         console.print("\n[bold]DESCRIPTION[/]")
