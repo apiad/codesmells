@@ -1,4 +1,1 @@
-from codesmells.cli import app
-
-def main() -> None:
-    app()
+# Public API populated as modules land during rebuild.

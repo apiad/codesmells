@@ -1,5 +1,5 @@
 from codesmells.alignment import FuzzyAlignmentEngine
-from codesmells.models import Token, TokenClass
+from codesmells.types import Token, TokenClass
 import math
 
 def test_score_match_literal_match():

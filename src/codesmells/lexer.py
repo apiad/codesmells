@@ -1,6 +1,6 @@
 import re
 from typing import List
-from codesmells.models import Token, TokenClass
+from codesmells.types import Token, TokenClass
 
 class ProbabilisticLexer:
     """

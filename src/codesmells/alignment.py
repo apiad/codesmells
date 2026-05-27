@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Optional
-from codesmells.models import Token, TokenClass
+from codesmells.types import Token, TokenClass
 
 class FuzzyAlignmentEngine:
     """

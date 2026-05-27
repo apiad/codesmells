@@ -1,5 +1,5 @@
 from codesmells.lexer import ProbabilisticLexer
-from codesmells.models import TokenClass
+from codesmells.types import TokenClass
 
 def test_tokenize_basic():
     lexer = ProbabilisticLexer()
