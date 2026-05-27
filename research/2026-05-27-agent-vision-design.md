@@ -232,15 +232,26 @@ class Finding:
 
 Never persisted. Produced fresh per `scan`/`inspect`/`check`. `inspect <id>` re-scans only the file containing that id — cheap because IDs encode the file path.
 
-### 5.4 Normalization fix
+### 5.4 Normalization
 
-The current impl divides by `2.0 × Σ template weights`, contradicting both the spec and the docstring. The rebuild uses the spec formula:
+The current code computes:
 
 ```
-S(C, E) = raw_score / sum(t.weight for t in template)
+S(C, E) = raw_score / (2.0 × sum(t.weight for t in template))
 ```
 
-Each rule's `tau` is recalibrated against its own anti-pattern examples during library curation — expected band 0.7–0.8, vs the current artificially-low 0.4.
+This is correct math: `score_match` returns `tc.weight × 2.0` for an exact match, so a perfect alignment has raw score `2.0 × Σ_t.weight`. Dividing by the same `2.0 × Σ_t.weight` puts scores in `[0, 1]` for typical matches.
+
+(The earlier spec at `research/design.md` §3.4 wrote the formula as `A / Σ_t.weight` and omitted the 2× — that was an incomplete spec, not a code bug. The rebuild keeps the existing implementation untouched and recalibrates the thresholds against the `[0, 1]` range it actually produces.)
+
+Default thresholds (calibrated against the `[0, 1]` range the existing implementation produces; matches what the current `cli.py` ignore command already uses in practice):
+
+- Rule `tau` (anti-pattern firing): `>= 0.4` to `>= 0.7` per rule (per-rule override in frontmatter)
+- `tau_safe` (safe-pattern guard): `0.7`
+- Gate 1 (faithful): `>= 0.7`
+- Gate 3 (distinct): `< 0.9` for all anti-patterns of the rule
+
+The `0.9` distinct threshold is deliberately loose — sigil-substituted anti-patterns can score around 0.7–0.8 against each other even when semantically distinct (e.g., `except Exception` vs `except ValueError`), so the gate only rejects near-identical resubmissions of the anti-pattern itself.
 
 ---
 
@@ -262,13 +273,13 @@ except $EXC_TYPE as $VAR:
 EOF
 ```
 
-Three gates:
+Three gates (thresholds per §5.4):
 
 | Gate | Check | Threshold |
 |---|---|---|
 | 1. faithful | template aligns to candidate's snippet | `score >= 0.7` |
 | 2. generic | template contains at least one `$SIGIL` or `...` | structural |
-| 3. distinct | template does NOT align to any `### Anti-Pattern` of this rule | `score < 0.5` for all |
+| 3. distinct | template does NOT align to any `### Anti-Pattern` of this rule | `score < 0.9` for all |
 
 On success: append under `### Safe` in `.codesmells/<rule-id>.smell.md`, `m.ok` confirmation. On failure: per-gate diagnostic via `m.fail`, no file mutation, agent reads and retries.
 

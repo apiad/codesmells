@@ -729,77 +729,9 @@ git commit -m "feat(rules): library access via importlib.resources"
 
 ---
 
-# Slice 2 — Scanner with windowed multi-fire + normalization fix
+# Slice 2 — Scanner with windowed multi-fire
 
-### Task 2.1: Fix the normalization formula
-
-**Files:**
-- Modify: `src/codesmells/alignment.py`
-- Modify: `tests/test_alignment.py`
-
-- [ ] **Step 1:** Edit `alignment.py` — find the line:
-
-```python
-normalized_score = score / (2.0 * template_weight_sum)
-```
-
-Replace with:
-
-```python
-normalized_score = score / template_weight_sum
-```
-
-- [ ] **Step 2:** Update the two tests in `tests/test_alignment.py` whose hardcoded expected values were calibrated to the 2× divisor
-
-Find `test_align_simple_match`. Change the assertion:
-
-```python
-assert math.isclose(score, 0.85)
-```
-
-to:
-
-```python
-assert math.isclose(score, 1.7)
-```
-
-(The new formula puts an exact match at 2× weight per token, so a perfect alignment scores ~2.0; this test had one sigil substitution and a gap, hence 1.7.)
-
-Find `test_align_with_gaps`. Change:
-
-```python
-assert math.isclose(score, 6.9 / 9.0)
-```
-
-to:
-
-```python
-assert math.isclose(score, 6.9 / 4.5)
-```
-
-Find `test_align_repeated_sigils_match`. Change:
-
-```python
-assert math.isclose(score, 0.5)
-```
-
-to:
-
-```python
-assert math.isclose(score, 1.0)
-```
-
-- [ ] **Step 3:** Run alignment tests
-
-Run: `uv run pytest tests/test_alignment.py -q`
-Expected: 17 passed.
-
-- [ ] **Step 4:** Commit
-
-```bash
-git add src/codesmells/alignment.py tests/test_alignment.py
-git commit -m "fix(alignment): drop spurious 2× divisor; match spec normalization"
-```
+> Note: `alignment.py` and its tests remain untouched. The existing `/ (2.0 × Σ_t.weight)` normalization is correct math (see spec §5.4 update from 2026-05-27): the match-score function multiplies by 2.0 for exact matches, so dividing by `2.0 × Σ_t.weight` produces scores in `[0, 1]`. Thresholds throughout this plan are calibrated to that range.
 
 ### Task 2.2: Failing scanner test — single match
 
@@ -815,7 +747,7 @@ from codesmells.scanner import scan_path
 from codesmells.rules import parse_rule_file
 
 
-def _make_rule(tmp_path: Path, name: str, anti: str, pre_filter: str, tau: float = 0.7):
+def _make_rule(tmp_path: Path, name: str, anti: str, pre_filter: str, tau: float = 0.4):
     p = tmp_path / f"{name}.smell.md"
     p.write_text(f"""---
 id: {name}
@@ -1072,7 +1004,7 @@ def test_scan_skips_safe_patterns(tmp_path):
     rule_text = """---
 id: print_rule
 lang: [python]
-tau: 0.7
+tau: 0.4
 pre_filters:
   - "print"
 ---
@@ -1165,7 +1097,7 @@ git commit -m "test(scanner): multi-fire, safe guard, per-site ignore, determini
 ---
 id: catch-all-exception
 lang: [python]
-tau: 0.8
+tau: 0.5
 severity: warn
 pre_filters:
   - "except Exception"
@@ -1202,7 +1134,7 @@ except ValueError as $VAR:
 ---
 id: print-instead-of-log
 lang: [python]
-tau: 0.8
+tau: 0.5
 severity: info
 pre_filters:
   - "print"
@@ -1231,7 +1163,7 @@ logger.info($MESSAGE)
 ---
 id: mutable-default-argument
 lang: [python]
-tau: 0.8
+tau: 0.5
 severity: warn
 pre_filters:
   - "def "
@@ -1266,7 +1198,7 @@ def $FUNC($ARG=None):
 ---
 id: bare-return
 lang: [python]
-tau: 0.85
+tau: 0.6
 severity: info
 pre_filters:
   - "return"
@@ -1301,7 +1233,7 @@ def $FUNC(...):
 ---
 id: todo-fixme
 lang: [any]
-tau: 0.9
+tau: 0.5
 severity: info
 pre_filters:
   - "TODO"
@@ -1864,12 +1796,12 @@ def _three_gates(template: str, finding, rule):
         a_tokens = lex.tokenize(anti)
         s, _, _ = eng.align(a_tokens, t_tokens)
         worst = max(worst, s)
-        if s >= 0.5:
+        if s >= 0.9:
             gate3_ok = False
     return [
         ("gate 1 (faithful)", gate1_ok, f"score {score1:.2f} (need >= 0.7)"),
         ("gate 2 (generic)", gate2_ok, "must contain $SIGIL or ..."),
-        ("gate 3 (distinct)", gate3_ok, f"worst anti-pattern match {worst:.2f} (need < 0.5)"),
+        ("gate 3 (distinct)", gate3_ok, f"worst anti-pattern match {worst:.2f} (need < 0.9)"),
     ]
 
 
