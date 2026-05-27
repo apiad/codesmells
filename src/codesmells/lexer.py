@@ -29,7 +29,7 @@ class ProbabilisticLexer:
         self.patterns = [
             (r"\.\.\.", TokenClass.GAP, 1.0),
             (r"\$[A-Z0-9_]+", TokenClass.SIGIL, 1.0),
-            (r"[^\w\s\"']+", TokenClass.OPERATOR, 1.0),
+            (r"[^\w\s\"'$]+", TokenClass.OPERATOR, 1.0),
             (kw_pattern, TokenClass.KEYWORD, 1.0),
             (r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", TokenClass.IDENTIFIER, 0.5),
             (r"(\d+\.?\d*|\"[^\"]*\"|'[^']*')", TokenClass.LITERAL, 0.2),
